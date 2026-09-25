@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MedAnchor Study — Learn deeper. Retain longer. Apply with confidence.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <div class="brand-text">
+        <span class="brand-name">MedAnchor</span>
+        <span class="brand-sub">Study</span>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-foot">
+      <div class="focus-card">
+        <div class="focus-label">Today's anchor</div>
+        <div class="focus-text" id="sideFocus">—</div>
+      </div>
+      <button class="side-reset" data-action="open-reset" title="Reset demo data">Reset demo data</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-right">
+        <div class="streak" title="Current study streak"><span class="streak-flame">&#128293;</span><span id="streakNum">0</span></div>
+        <div class="avatar" id="avatar">S</div>
+      </div>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="modalBackdrop"></div>
+<div class="modal hidden" id="modal" role="dialog" aria-modal="true">
+  <div class="modal-head">
+    <h3 id="modalTitle">Title</h3>
+    <button class="modal-close" data-action="close-modal" aria-label="Close">&times;</button>
+  </div>
+  <div class="modal-body" id="modalBody"></div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
