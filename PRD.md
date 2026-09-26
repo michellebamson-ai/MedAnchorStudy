@@ -935,3 +935,27 @@ The long-term experience is:
 «Upload what you are learning → understand it → practice it → apply it → identify what you don't know → study what matters most → review it at the right time → track improvement.»
 
 The product should make the student's existing learning materials more useful while providing the guidance, practice, research support, planning, and feedback needed to turn information into lasting knowledge and practical competence.
+## Agent Steering Notes
+
+**Tool decisions (Task 1):**
+
+The AI initially proposed: vanilla JavaScript, SQLite (better-sqlite3), 
+and Auth.js for authentication.
+
+I reviewed these and requested changes based on my course's recommended 
+stack instead:
+
+- Framework: switched from vanilla JavaScript to Next.js (App Router)
+- Database: switched from SQLite to PostgreSQL
+- Authentication: switched from Auth.js to Better Auth
+
+The AI explained its original choices, then confirmed the switch. The 
+final stack is:
+- Framework: Next.js with App Router, TypeScript
+- Database: PostgreSQL (running locally via Docker on port 5432)
+- Database access: Prisma ORM
+- Authentication: Better Auth (email/password, database-backed sessions)
+- File storage: local filesystem (data/uploads/)
+- Runtime: local Next.js server on http://localhost:3000
+
+Everything currently runs locally — no deployment.
