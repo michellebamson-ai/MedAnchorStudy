@@ -959,3 +959,8 @@ final stack is:
 - Runtime: local Next.js server on http://localhost:3000
 
 Everything currently runs locally — no deployment.
+## Design Refinement Notes
+
+### Task 2: Steer Design Improvement
+* **Refinement Requested:** Enhanced the visual contrast, feedback indicators, and interactive depth on core primary action inputs.
+* **Specific Changes:** Upgraded the `.btn-primary` component styling to incorporate a smooth gradient shifting on hover between the primary deep teal brand color (`#04342C`) and the secondary highlight blue (`#0E7490`). Implemented a 3D elevation movement script (`translateY(-2px)`) coupled with interactive glowing container drop-shadows on focused states to ensure immediate feedback.

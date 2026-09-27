@@ -1,177 +1,799 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedAnchor Study - UI Component System Preview</title>
-    <!-- Fonts matching the user reference layout -->
-    <link rel="preconnect" href="https://googleapis.com">
-    <link rel="preconnect" href="https://gstatic.com" crossorigin>
-    <link href="https://googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
-    
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MedAnchor Study — Design Preview</title>
     <style>
-        :root {
-            /* Brand Identity color hexes extracted from user's MedAnchor reference image */
-            --primary: #04342C;
-            --secondary: #0E7490;
-            --accent: #22D3EE;
-            --dark: #0F2A3D;
-            --light: #E6F7FA;
-            --surface: #FFFFFF;
-            --success: #108981;
-            --warning: #F59E0B;
-            --error: #EF4444;
-            
-            --font-main: 'Inter', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
+      :root {
+        --bg: #07141f;
+        --bg-2: #0d1f2b;
+        --panel: #102a39;
+        --panel-2: #123449;
+        --panel-soft: rgba(255,255,255,0.03);
+        --line: rgba(145, 214, 255, 0.18);
+        --line-strong: rgba(145, 214, 255, 0.26);
+        --text: #eaf8ff;
+        --muted: #a9c7d8;
+        --primary: #71d4ff;
+        --primary-strong: #2bb6ff;
+        --secondary: #9df0c5;
+        --secondary-strong: #69d8a7;
+        --accent: #d9c2ff;
+        --warning: #ffd580;
+        --danger: #ff8ea8;
+        --shadow: 0 24px 60px rgba(2, 9, 16, 0.42);
+        --radius-xl: 28px;
+        --radius-lg: 20px;
+        --radius-md: 14px;
+        --radius-sm: 10px;
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; }
+
+      body {
+        margin: 0;
+        font-family: Inter, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(43, 182, 255, 0.18), transparent 23%),
+          radial-gradient(circle at right, rgba(157, 240, 197, 0.12), transparent 24%),
+          linear-gradient(180deg, #061119 0%, #0a1824 100%);
+        color: var(--text);
+        line-height: 1.5;
+      }
+
+      a { text-decoration: none; color: inherit; }
+
+      .container {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      .app-shell {
+        max-width: 1280px;
+        margin: 24px auto;
+        border: 1px solid var(--line);
+        border-radius: 30px;
+        background: rgba(7, 19, 27, 0.86);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 18px 26px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255,255,255,0.015);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 700;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: #032236;
+        font-weight: 800;
+      }
+
+      .brand-name {
+        font-size: 1.05rem;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-name strong { font-size: 1.18rem; }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 0.58rem 0.82rem;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.02);
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        border: none;
+        border-radius: 999px;
+        padding: 0.9rem 1.3rem;
+        font-weight: 700;
+        font-size: 0.96rem;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: #022536;
+        box-shadow: 0 12px 24px rgba(43, 182, 255, 0.22);
+      }
+
+      .btn-secondary {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--line);
+        color: var(--text);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--line);
+        background: rgba(13, 31, 43, 0.7);
+        padding: 24px 18px;
+      }
+
+      .nav-group {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 22px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.82rem 0.9rem;
+        border: 1px solid transparent;
+        border-radius: 14px;
+        color: var(--muted);
+        font-weight: 600;
+        background: rgba(255,255,255,0.015);
+      }
+
+      .nav-item.active {
+        background: rgba(113, 212, 255, 0.09);
+        border-color: var(--line-strong);
+        color: var(--text);
+      }
+
+      .nav-item .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+      }
+
+      .focus-card {
+        margin-top: 20px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: rgba(255,255,255,0.02);
+      }
+
+      .focus-card small {
+        display: block;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .focus-card strong {
+        font-size: 1.1rem;
+      }
+
+      .main {
+        padding: 28px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 26px;
+        align-items: center;
+        padding: 16px 0 22px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        padding: 0.52rem 0.8rem;
+        border-radius: 999px;
+        border: 1px solid rgba(113,212,255,0.22);
+        background: rgba(113,212,255,0.06);
+        color: var(--primary);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      h1, h2, h3, p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-top: 18px;
+        margin-bottom: 14px;
+        font-size: clamp(2.3rem, 5vw, 4rem);
+        line-height: 1.02;
+        letter-spacing: -0.06em;
+      }
+
+      .hero-copy p {
+        max-width: 700px;
+        color: var(--muted);
+        font-size: 1.02rem;
+      }
+
+      .cta-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .stat-strip {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+
+      .mini-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.48rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.02);
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .mini-pill::before {
+        content: "•";
+        color: var(--secondary);
+        font-size: 1.4rem;
+      }
+
+      .hero-visual {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: linear-gradient(180deg, rgba(15,32,42,1), rgba(9,24,32,0.94));
+        overflow: hidden;
+        box-shadow: 0 25px 40px rgba(4, 12, 18, 0.32);
+      }
+
+      .visual-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .window-dots {
+        display: flex;
+        gap: 8px;
+      }
+
+      .window-dots span {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .window-dots span:nth-child(1) { background: #ff7a7a; }
+      .window-dots span:nth-child(2) { background: #ffd166; }
+      .window-dots span:nth-child(3) { background: #64dc8d; }
+
+      .visual-body {
+        padding: 18px 18px 20px;
+      }
+
+      .feature-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.02);
+      }
+
+      .feature-row strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .feature-row small {
+        color: var(--muted);
+      }
+
+      .live-badge {
+        padding: 0.42rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(157,240,197,0.12);
+        color: var(--secondary);
+        border: 1px solid rgba(157,240,197,0.18);
+        font-size: 0.7rem;
+        font-weight: 700;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .metric {
+        border-radius: 16px;
+        padding: 16px 14px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.02);
+      }
+
+      .metric .label {
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .metric .value {
+        margin-top: 10px;
+        font-weight: 800;
+        font-size: 1.7rem;
+        letter-spacing: -0.05em;
+      }
+
+      .floating-card {
+        margin-top: 16px;
+        margin-left: 20px;
+        width: 180px;
+        border-radius: 18px;
+        padding: 14px 16px;
+        border: 1px solid rgba(157,240,197,0.18);
+        background: rgba(6, 30, 36, 0.92);
+        box-shadow: 0 18px 48px rgba(4,12,18,0.28);
+      }
+
+      .floating-card .label {
+        color: var(--muted);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .floating-card .score {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-weight: 800;
+      }
+
+      .floating-card .score strong {
+        font-size: 2rem;
+      }
+
+      .floating-card .score span {
+        color: var(--secondary);
+      }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 8px;
+      }
+
+      .card {
+        padding: 18px 18px 16px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(14, 27, 38, 0.9), rgba(10, 22, 31, 0.96));
+      }
+
+      .card .icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        background: rgba(113,212,255,0.11);
+        border: 1px solid rgba(113,212,255,0.18);
+        font-size: 1.45rem;
+        margin-bottom: 14px;
+      }
+
+      .card h3 {
+        margin-bottom: 10px;
+        font-size: 1.2rem;
+      }
+
+      .card p {
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 14px 0 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .feature-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .feature-list li::before {
+        content: "✓";
+        margin-top: 1px;
+        color: var(--secondary);
+        font-weight: 800;
+      }
+
+      .research-card {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+        background: rgba(255,255,255,0.015);
+      }
+
+      .research-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255,255,255,0.02);
+        color: var(--muted);
+      }
+
+      .research-box strong {
+        color: var(--text);
+      }
+
+      .input-panel {
+        margin-top: 26px;
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        gap: 18px;
+        align-items: start;
+      }
+
+      .input-box {
+        padding: 18px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.02);
+      }
+
+      .input-box h3 {
+        margin-bottom: 12px;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .field label {
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .field input, .field textarea, .field select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 0.95rem 1rem;
+        outline: none;
+        background: rgba(8, 18, 26, 0.8);
+        color: var(--text);
+        font: inherit;
+      }
+
+      .field input::placeholder {
+        color: rgba(169, 199, 216, 0.7);
+      }
+
+      .summary-box {
+        padding: 18px;
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(157,240,197,0.18);
+        background: linear-gradient(180deg, rgba(6, 29, 35, 0.95), rgba(9, 22, 28, 0.98));
+      }
+
+      .summary-box h3 {
+        margin-bottom: 8px;
+      }
+
+      .summary-box ul {
+        list-style: none;
+        padding: 0;
+        margin: 12px 0 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .summary-box li {
+        color: var(--muted);
+      }
+
+      .summary-box li::before {
+        content: "•";
+        color: var(--secondary);
+        margin-right: 8px;
+      }
+
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
         }
 
-        body {
-            font-family: var(--font-main);
-            background-color: var(--light);
-            color: var(--dark);
-            margin: 0;
-            padding: 40px 20px;
-            display: flex;
-            justify-content: center;
+        .sidebar {
+          border-right: none;
+          border-bottom: 1px solid var(--line);
         }
 
-        .design-preview-container {
-            max-width: 800px;
-            width: 100%;
-            background: var(--surface);
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(15, 42, 61, 0.05);
+        .hero,
+        .input-panel,
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .topbar {
+          flex-wrap: wrap;
+          justify-content: center;
         }
 
-        .header-brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 40px;
-            border-bottom: 2px solid var(--light);
-            padding-bottom: 20px;
+        .topbar-actions {
+          width: 100%;
+          justify-content: center;
+          flex-wrap: wrap;
         }
 
-        .logo-icon {
-            font-size: 28px;
-            color: var(--secondary);
+        .main {
+          padding: 18px 16px 22px;
         }
 
-        h1 { font-size: 32px; font-weight: 700; color: var(--primary); margin: 0; }
-        h2 { font-size: 24px; font-weight: 600; color: var(--dark); margin: 30px 0 15px 0; }
-        p { font-size: 16px; line-height: 1.6; color: var(--dark); margin-bottom: 20px; }
-        
-        .mono-tag {
-            font-family: var(--font-mono);
-            font-size: 14px;
-            background: var(--light);
-            padding: 4px 8px;
-            border-radius: 4px;
+        .feature-row {
+          align-items: flex-start;
+          flex-direction: column;
         }
 
-        /* Interactive Component Elements */
-        .interactive-elements-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            max-width: 400px;
-            margin-top: 25px;
+        .metric-grid {
+          grid-template-columns: 1fr;
         }
-
-        .field-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        label {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .styled-input {
-            font-family: var(--font-main);
-            font-size: 15px;
-            padding: 12px 16px;
-            border: 1.5px solid #CBD5E1;
-            border-radius: 8px;
-            outline: none;
-            transition: all 0.2s ease-in-out;
-        }
-
-        /* Input highlight state */
-        .styled-input:focus {
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.15);
-        }
-
-        .btn {
-            font-family: var(--font-main);
-            font-size: 14px;
-            font-weight: 600;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.3s ease;
-            border: 1px solid transparent;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        /* TASK 2 DESIGN STEERING REFINEMENT: Smooth transformation scale and linear-gradient background */
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #04342C 0%, #0E7490 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(4, 52, 44, 0.25);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--secondary);
-            border-color: var(--secondary);
-        }
-
-        .btn-secondary:hover {
-            background: var(--light);
-        }
+      }
     </style>
-</head>
-<body>
-
-    <div class="design-preview-container">
-        <div class="header-brand">
-            <span class="logo-icon">⚓</span>
-            <h1>MedAnchor Study</h1>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand" aria-label="MedAnchor Study brand">
+          <span class="brand-mark">M</span>
+          <span class="brand-name"><strong>MedAnchor</strong> Study</span>
         </div>
 
-        <p>This is the verified static UI design layout preview for the MedAnchor application dashboard environment.</p>
+        <div class="topbar-actions">
+          <span class="pill">AI learning platform</span>
+          <button class="btn btn-primary">Open workspace</button>
+        </div>
+      </header>
 
-        <h2>Typography Guidelines</h2>
-        <h1>Heading 1 - 32px Bold</h1>
-        <h2>Heading 2 - 24px Semibold</h2>
-        <p>Standard paragraph structure font body scaling is 16px Regular. Technical formulas apply the <span class="mono-tag">JetBrains Mono</span> family stack.</p>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="nav-group">
+            <div class="nav-item active"><span class="dot"></span> Dashboard</div>
+            <div class="nav-item"><span class="dot"></span> Teach Me</div>
+            <div class="nav-item"><span class="dot"></span> Analyze Docs</div>
+            <div class="nav-item"><span class="dot"></span> Cases</div>
+            <div class="nav-item"><span class="dot"></span> Research</div>
+            <div class="nav-item"><span class="dot"></span> Planner</div>
+          </div>
 
-        <h2>UI Components & Interactive Previews</h2>
-        <div class="interactive-elements-wrapper">
-            <div class="field-group">
-                <label for="search">Search topics, questions, or ask MedAnchor...</label>
-                <input type="text" id="search" class="styled-input" placeholder="e.g., Biostatistics, Microbiology...">
+          <div class="focus-card">
+            <small>Today's anchor</small>
+            <strong>Regression review</strong>
+          </div>
+        </aside>
+
+        <main class="main">
+          <section class="hero">
+            <div class="hero-copy">
+              <div class="eyebrow">Healthcare learning</div>
+              <h1>Turn dense study material into active clinical understanding.</h1>
+              <p>
+                MedAnchor Study combines Socratic tutoring, document analysis, realistic case simulation,
+                research support, and personalized study planning so students can learn, apply, and retain knowledge across medicine, nursing, public health, and allied sciences.
+              </p>
+
+              <div class="cta-row">
+                <button class="btn btn-primary">Start learning</button>
+                <button class="btn btn-secondary">Explore features</button>
+              </div>
+
+              <div class="stat-strip">
+                <span class="mini-pill">Medical students</span>
+                <span class="mini-pill">Nursing & public health</span>
+                <span class="mini-pill">Adaptive review</span>
+              </div>
             </div>
 
-            <button class="btn btn-primary">Primary Action Button</button>
-            <button class="btn btn-secondary">Secondary Action Button</button>
-        </div>
+            <div class="hero-visual" aria-label="Dashboard preview">
+              <div class="visual-header">
+                <div class="window-dots"><span></span><span></span><span></span></div>
+                <strong>Study overview</strong>
+              </div>
+
+              <div class="visual-body">
+                <div class="feature-row">
+                  <div>
+                    <strong>Teach Me Mode</strong>
+                    <small>Adaptive Socratic tutoring</small>
+                  </div>
+                  <span class="live-badge">Live</span>
+                </div>
+
+                <div class="metric-grid">
+                  <div class="metric">
+                    <div class="label">Mastery</div>
+                    <div class="value">74%</div>
+                  </div>
+                  <div class="metric">
+                    <div class="label">Weak areas</div>
+                    <div class="value">3</div>
+                  </div>
+                  <div class="metric">
+                    <div class="label">Review</div>
+                    <div class="value">6</div>
+                  </div>
+                </div>
+
+                <div class="floating-card">
+                  <div class="label">Learning loop</div>
+                  <div class="score"><strong>89</strong><span>▲ 12</span></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-grid" aria-label="Core feature cards">
+            <article class="card">
+              <div class="icon">💬</div>
+              <h3>Teach Me</h3>
+              <p>Guided questioning, explanations, and misconception checks aligned to student level.</p>
+              <ul class="feature-list">
+                <li>Adaptive tutoring</li>
+                <li>Case-linked review</li>
+                <li>Weakness targeting</li>
+              </ul>
+            </article>
+
+            <article class="card">
+              <div class="icon">📚</div>
+              <h3>Analyze Docs</h3>
+              <p>Lecture notes, slides, PDFs, and audio become structured study resources.</p>
+              <ul class="feature-list">
+                <li>Topic extraction</li>
+                <li>Flashcards and summaries</li>
+                <li>Practice questions</li>
+              </ul>
+            </article>
+
+            <article class="card">
+              <div class="icon">🩺</div>
+              <h3>Case Simulators</h3>
+              <p>Apply theory to patient cases, differential diagnosis, and public-health decisions.</p>
+              <ul class="feature-list">
+                <li>Clinical reasoning</li>
+                <li>Outbreak scenarios</li>
+                <li>Feedback and adaptation</li>
+              </ul>
+            </article>
+          </section>
+
+          <section class="research-card card" aria-label="Research and study planning section">
+            <div class="feature-row">
+              <div>
+                <strong>Research & evidence engine</strong>
+                <small>Peer-reviewed literature, guidelines, and source-aware summaries</small>
+              </div>
+              <span class="live-badge">Cited</span>
+            </div>
+
+            <div class="research-box">
+              <strong>Study Design</strong>
+              <span>Case-control review</span>
+            </div>
+            <div class="research-box">
+              <strong>Biostatistics</strong>
+              <span>Relative risk + confidence intervals</span>
+            </div>
+            <div class="research-box">
+              <strong>Planner</strong>
+              <span>2-hour deep study block</span>
+            </div>
+          </section>
+
+          <section class="input-panel" aria-label="Sample input preview">
+            <div class="input-box">
+              <h3>Ask MedAnchor</h3>
+
+              <div class="field">
+                <label for="topic">Topic</label>
+                <input id="topic" type="text" value="Explain logistic regression in simple terms" />
+              </div>
+
+              <div class="field">
+                <label for="role">Study mode</label>
+                <select id="role">
+                  <option>Gentle guidance</option>
+                  <option>Rapid-fire questioning</option>
+                  <option>Exam-style pressure</option>
+                  <option>Step-by-step teaching</option>
+                </select>
+              </div>
+
+              <button class="btn btn-primary">Generate explanation</button>
+            </div>
+
+            <aside class="summary-box">
+              <h3>Study summary</h3>
+              <ul>
+                <li>Weakness identified: regression interpretation</li>
+                <li>Next review: 3 days</li>
+                <li>Upcoming deadline: Epidemiology exam</li>
+                <li>Suggested activity: 5 practice questions</li>
+              </ul>
+            </aside>
+          </section>
+        </main>
+      </div>
     </div>
-
-</body>
+  </body>
 </html>
-
-
-

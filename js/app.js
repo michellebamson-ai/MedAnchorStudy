@@ -1003,75 +1003,91 @@ const App = (function () {
     const week = S.activity.slice(-7);
     const maxPts = Math.max(1, ...week.map((a) => a.pts));
     const weak = weakTopics();
-    const todayS = S.plan.filter((s) => s.day === todayISO() && !s.done);
+    const todayPlan = S.plan.filter((s) => s.day === todayISO());
+    const todayS = todayPlan.filter((s) => !s.done);
     const totalMastery = DATA.TOPICS.reduce((a, t) => a + ((S.topics[t.id] || {}).mastery || 0), 0);
     const overall = Math.round(totalMastery / DATA.TOPICS.length);
     const covPct = Math.round(DATA.TOPICS.filter((t) => S.coverage[t.id]).length / DATA.TOPICS.length * 100);
     const cardsSeen = Math.round(DATA.FLASHCARDS.filter((c) => (S.cards[c.id] || {}).status === 2).length / DATA.FLASHCARDS.length * 100);
+    const donePct = todayPlan.length ? Math.round((todayPlan.filter((s) => s.done).length / todayPlan.length) * 100) : 0;
+    const dateLabel = dt.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
     v.innerHTML = `
-      <div class="hero">
-        <h1>Learn deeper. Retain longer. Apply with confidence.</h1>
-        <p>${greet}, ${esc(S.profile.name)} — MedAnchor Study turns dense healthcare content into a personalized learning loop: understand it, explain it, apply it, and review what is still weak.</p>
-        <div class="cta-row">
-          <button class="btn btn-accent btn-lg" data-nav-to="teachme">🧠 Start Teach Me Mode</button>
-          <button class="btn btn-lg" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff" data-nav-to="study">📥 Upload course material</button>
-          <button class="btn btn-lg" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff" data-nav-to="exam">🎯 Prepare for exams</button>
+      <section class="dashboard-heading">
+        <div>
+          <div class="dashboard-date">${esc(dateLabel)}</div>
+          <h1>${greet}, ${esc(S.profile.name)}.</h1>
+          <p>Your next best study step, based on what needs attention.</p>
         </div>
-      </div>
+        <button class="btn btn-primary" data-nav-to="study"><span aria-hidden="true">＋</span> Add study material</button>
+      </section>
 
-      <div class="grid grid-4 mt">
-        <div class="stat-tile"><div class="num">${overall}%</div><div class="lbl">Overall understanding</div></div>
-        <div class="stat-tile"><div class="num">${covPct}%</div><div class="lbl">Course material covered</div></div>
-        <div class="stat-tile"><div class="num">${todayS.length}</div><div class="lbl">Sessions today · ${esc(todayFocus())}</div></div>
-        <div class="stat-tile"><div class="num">${cardsSeen}%</div><div class="lbl">Flashcards mastered</div></div>
-      </div>
-
-      <div class="grid grid-2 mt">
-        <div class="card">
-          <div class="section-title">📅 Your learning loop this week <span class="sub">productive study, not passive reading</span></div>
-          <div class="flex" style="gap:10px;align-items:flex-end;height:110px">
-            ${week.map((a) => `<div style="flex:1;text-align:center"><div style="height:${Math.max(6, (a.pts / maxPts) * 84)}px;background:linear-gradient(180deg,#22d3ee,#0e7490);border-radius:6px 6px 0 0"></div><div class="sm muted mt-s">${new Date(a.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'narrow' })}</div></div>`).join('')}
+      <section class="dashboard-focus" aria-labelledby="focusTitle">
+        <div class="focus-main">
+          <div class="dashboard-label"><span class="status-dot"></span> TODAY'S FOCUS</div>
+          <h2 id="focusTitle">${todayS.length ? esc(TOPIC(todayS[0].topicId).title) : 'Your plan is clear for today'}</h2>
+          <p>${todayS.length ? `${esc(PLAN_TYPE[todayS[0].type].short)} · ${esc(TOPIC(todayS[0].topicId).field)} · ${todayS.length} session${todayS.length === 1 ? '' : 's'} left in your plan` : 'Choose a topic to keep your learning loop moving.'}</p>
+          <div class="focus-actions">
+            ${todayS.length ? `<button class="btn btn-light" data-nav-to="${todayS[0].type === 'case' ? `practice/${TOPIC(todayS[0].topicId).caseId}` : todayS[0].type === 'flashcards' ? 'flashcards' : todayS[0].type === 'summary' ? 'summaries' : todayS[0].type === 'quiz' ? 'exam' : `teachme/${todayS[0].topicId}`}" >Start today's session <span aria-hidden="true">→</span></button>` : '<button class="btn btn-light" data-nav-to="teachme">Choose a topic <span aria-hidden="true">→</span></button>'}
+            <button class="focus-plan-link" data-nav-to="plan">View study plan</button>
           </div>
         </div>
-        <div class="card">
-          <div class="section-title">🧭 Topics to prioritize</div>
-          ${weak.map((w, i) => `
-            <div class="row">
-              <div class="row-icon">${w.t.icon}</div>
-              <div class="row-main"><div class="row-title">${esc(w.t.title)} ${i === 0 ? '<span class="chip chip-bad">weakest</span>' : '<span class="chip chip-warn">prioritise</span>'}</div>
-                <div class="bar mt-s ${w.m < 35 ? 'bar-bad' : 'bar-warn'}"><i style="width:${w.m}%"></i></div></div>
-              <button class="btn btn-sm" data-nav-to="teachme/${w.t.id}">Study →</button>
-            </div>`).join('')}
-          <div class="mt"><button class="btn btn-sm btn-soft" data-nav-to="progress">Full progress dashboard →</button></div>
+        <div class="focus-progress" aria-label="Today's plan progress">
+          <div class="focus-progress-ring" style="--progress:${donePct}%"><span>${donePct}%</span></div>
+          <div><strong>${todayPlan.filter((s) => s.done).length} of ${todayPlan.length}</strong><span>sessions complete</span></div>
         </div>
-      </div>
+      </section>
 
-      <div class="grid grid-2 mt">
-        <div class="card">
-          <div class="section-title">📚 Your next study journey <span class="sub">guided by your weakest anchors and upcoming exams</span></div>
-          <div class="grid grid-3" style="grid-template-columns:1fr">
-            ${DATA.TOPICS.map((t) => `
-              <div class="row">
-                <div class="row-icon">${t.icon}</div>
-                <div class="row-main">
-                  <div class="row-title">${esc(t.title)}</div>
-                  <div class="row-sub">${esc(t.field)} · mastery ${(S.topics[t.id] || {}).mastery || 0}%</div>
-                </div>
-                <button class="btn btn-sm btn-soft" data-nav-to="teachme/${t.id}">Teach me</button>
-              </div>`).join('')}
+      <section class="dashboard-quick" aria-label="Quick study actions">
+        <button class="quick-action" data-nav-to="teachme"><span class="quick-icon quick-teach" aria-hidden="true">✳</span><span><strong>Teach me</strong><small>Work through a topic</small></span><span class="quick-arrow" aria-hidden="true">↗</span></button>
+        <button class="quick-action" data-nav-to="practice"><span class="quick-icon quick-case" aria-hidden="true">⌕</span><span><strong>Practice a case</strong><small>Apply your knowledge</small></span><span class="quick-arrow" aria-hidden="true">↗</span></button>
+        <button class="quick-action" data-nav-to="flashcards"><span class="quick-icon quick-cards" aria-hidden="true">▤</span><span><strong>Review cards</strong><small>Recall what you know</small></span><span class="quick-arrow" aria-hidden="true">↗</span></button>
+        <button class="quick-action" data-nav-to="biostats"><span class="quick-icon quick-stats" aria-hidden="true">⌁</span><span><strong>Study research</strong><small>Stats, methods & evidence</small></span><span class="quick-arrow" aria-hidden="true">↗</span></button>
+      </section>
+
+      <section class="dashboard-section-head">
+        <div><h2>Today's study list</h2><p>A manageable path through your current priorities.</p></div>
+        <button class="text-action" data-nav-to="plan">Open planner <span aria-hidden="true">→</span></button>
+      </section>
+      <section class="study-list" aria-label="Today's study sessions">
+        ${todayPlan.length ? todayPlan.map((s, i) => {
+          const topic = TOPIC(s.topicId);
+          const href = s.type === 'case' ? `practice/${topic.caseId}` : s.type === 'flashcards' ? 'flashcards' : s.type === 'summary' ? 'summaries' : s.type === 'quiz' ? 'exam' : `teachme/${topic.id}`;
+          return `<article class="study-card ${s.done ? 'is-done' : ''}">
+            <div class="study-number">${s.done ? '<span aria-label="Complete">✓</span>' : String(i + 1).padStart(2, '0')}</div>
+            <div class="study-topic-mark" aria-hidden="true">${topic.icon}</div>
+            <div class="study-card-copy"><div class="study-card-meta">${esc(PLAN_TYPE[s.type].short)} <span>·</span> ${esc(topic.field)}</div><h3>${esc(topic.title)}</h3><p>${s.done ? 'Completed for today' : esc(topic.blurb)}</p></div>
+            ${s.done ? '<span class="study-complete">Complete</span>' : `<button class="btn btn-sm study-start" data-nav-to="${href}" aria-label="Start ${esc(PLAN_TYPE[s.type].short)}: ${esc(topic.title)}">Start <span aria-hidden="true">→</span></button>`}
+          </article>`;
+        }).join('') : '<div class="study-empty">No sessions planned today. Add a topic from Teach Me Mode to get started.</div>'}
+      </section>
+
+      <section class="dashboard-lower">
+        <div class="progress-panel">
+          <div class="panel-heading"><div><h2>Learning progress</h2><p>Your understanding is built through practice.</p></div><button class="icon-link" data-nav-to="progress" aria-label="Open progress dashboard" title="Open progress dashboard">↗</button></div>
+          <div class="progress-summary"><div class="mastery-ring" style="--progress:${overall}%"><span>${overall}<small>%</small></span></div><div><strong>Overall mastery</strong><p>${covPct}% of course anchors covered <span aria-hidden="true">·</span> ${cardsSeen}% of cards mastered</p></div></div>
+          <div class="weekly-heading"><strong>Study activity</strong><span>Last 7 days</span></div>
+          <div class="activity-chart dashboard-chart" role="img" aria-label="Study activity for the last seven days">
+            ${week.map((a) => `<div class="activity-column"><div class="activity-track"><div class="activity-bar" style="height:${Math.max(6, (a.pts / maxPts) * 84)}%" title="${a.pts} study points"></div></div><span class="activity-day">${new Date(a.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'narrow' })}</span></div>`).join('')}
           </div>
         </div>
-        <div class="card">
-          <div class="section-title">🕘 Recent activity <span class="sub">your learning loop in action</span></div>
-          ${S.history.slice(0, 6).map((h) => `
-            <div class="row">
-              <div class="row-icon">${h.type === 'Teach Me' ? '🧠' : h.type === 'Case' ? '🧩' : h.type === 'Flashcards' ? '🃏' : h.type === 'Explain It Back' ? '🗣️' : '📄'}</div>
-              <div class="row-main"><div class="row-title">${esc(h.label)}</div><div class="row-sub">${esc(h.type)} · ${fmtDay(h.date)}</div></div>
-              <span class="chip">${h.points} pts</span>
-            </div>`).join('')}
-          <div class="mt flex"><button class="btn btn-sm btn-ghost" data-nav-to="study">Upload new material →</button></div>
+
+        <div class="priority-panel">
+          <div class="panel-heading"><div><h2>Review these anchors</h2><p>Prioritized from your recent performance.</p></div><span class="priority-count">${weak.length} topics</span></div>
+          <div class="priority-list">
+            ${weak.map((w, i) => `<div class="priority-item"><span class="priority-icon" aria-hidden="true">${w.t.icon}</span><div class="priority-copy"><div class="priority-title">${esc(w.t.title)}</div><div class="priority-meter"><span style="width:${w.m}%;--meter:${w.m < 43 ? '#d77b54' : '#c39a47'}"></span></div></div><span class="priority-score">${w.m}%</span><button class="priority-open" data-nav-to="teachme/${w.t.id}" aria-label="Review ${esc(w.t.title)}" title="Review topic">→</button></div>`).join('')}
+          </div>
+          <button class="text-action priority-all" data-nav-to="progress">View all topic progress <span aria-hidden="true">→</span></button>
         </div>
-      </div>`;
+      </section>
+
+      <section class="dashboard-section-head recent-heading">
+        <div><h2>Recent study</h2><p>Pick up where you left off.</p></div>
+        <button class="text-action" data-nav-to="progress">See progress <span aria-hidden="true">→</span></button>
+      </section>
+      <section class="recent-list" aria-label="Recent study activity">
+        ${S.history.slice(0, 4).map((h) => `
+          <div class="recent-item"><span class="recent-mark" aria-hidden="true">${h.type === 'Teach Me' ? '✳' : h.type === 'Case' ? '⌕' : h.type === 'Flashcards' ? '▤' : h.type === 'Explain It Back' ? '↗' : '◷'}</span><div class="recent-copy"><strong>${esc(h.label)}</strong><span>${esc(h.type)} · ${fmtDay(h.date)}</span></div><span class="recent-points">${h.points} pts</span></div>`).join('')}
+      </section>`;
   }
 
   function progressPage() {
