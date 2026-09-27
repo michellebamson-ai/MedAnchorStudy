@@ -1010,12 +1010,12 @@ const App = (function () {
     const cardsSeen = Math.round(DATA.FLASHCARDS.filter((c) => (S.cards[c.id] || {}).status === 2).length / DATA.FLASHCARDS.length * 100);
     v.innerHTML = `
       <div class="hero">
-        <h1>${greet}, ${esc(S.profile.name)} 👋</h1>
-        <p>Let's turn your dense material into deep, exam-ready understanding. One anchor topic at a time.</p>
+        <h1>Learn deeper. Retain longer. Apply with confidence.</h1>
+        <p>${greet}, ${esc(S.profile.name)} — MedAnchor Study turns dense healthcare content into a personalized learning loop: understand it, explain it, apply it, and review what is still weak.</p>
         <div class="cta-row">
           <button class="btn btn-accent btn-lg" data-nav-to="teachme">🧠 Start Teach Me Mode</button>
-          <button class="btn btn-lg" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff" data-nav-to="study">📥 Upload material</button>
-          <button class="btn btn-lg" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff" data-nav-to="exam">🎯 Prep for an exam</button>
+          <button class="btn btn-lg" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff" data-nav-to="study">📥 Upload course material</button>
+          <button class="btn btn-lg" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff" data-nav-to="exam">🎯 Prepare for exams</button>
         </div>
       </div>
 
@@ -1028,13 +1028,13 @@ const App = (function () {
 
       <div class="grid grid-2 mt">
         <div class="card">
-          <div class="section-title">📅 This week's practice volume <span class="sub">meaningful activity, not page counts</span></div>
+          <div class="section-title">📅 Your learning loop this week <span class="sub">productive study, not passive reading</span></div>
           <div class="flex" style="gap:10px;align-items:flex-end;height:110px">
             ${week.map((a) => `<div style="flex:1;text-align:center"><div style="height:${Math.max(6, (a.pts / maxPts) * 84)}px;background:linear-gradient(180deg,#22d3ee,#0e7490);border-radius:6px 6px 0 0"></div><div class="sm muted mt-s">${new Date(a.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'narrow' })}</div></div>`).join('')}
           </div>
         </div>
         <div class="card">
-          <div class="section-title">🧭 Your anchors right now</div>
+          <div class="section-title">🧭 Topics to prioritize</div>
           ${weak.map((w, i) => `
             <div class="row">
               <div class="row-icon">${w.t.icon}</div>
@@ -1048,7 +1048,7 @@ const App = (function () {
 
       <div class="grid grid-2 mt">
         <div class="card">
-          <div class="section-title">📚 Continue learning <span class="sub">picked from your weakest anchor</span></div>
+          <div class="section-title">📚 Your next study journey <span class="sub">guided by your weakest anchors and upcoming exams</span></div>
           <div class="grid grid-3" style="grid-template-columns:1fr">
             ${DATA.TOPICS.map((t) => `
               <div class="row">

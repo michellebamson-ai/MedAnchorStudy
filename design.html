@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAnchor Study - UI Component System Preview</title>
+    <!-- Fonts matching the user reference layout -->
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Brand Identity color hexes extracted from user's MedAnchor reference image */
+            --primary: #04342C;
+            --secondary: #0E7490;
+            --accent: #22D3EE;
+            --dark: #0F2A3D;
+            --light: #E6F7FA;
+            --surface: #FFFFFF;
+            --success: #108981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            
+            --font-main: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .design-preview-container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(15, 42, 61, 0.05);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 20px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+            color: var(--secondary);
+        }
+
+        h1 { font-size: 32px; font-weight: 700; color: var(--primary); margin: 0; }
+        h2 { font-size: 24px; font-weight: 600; color: var(--dark); margin: 30px 0 15px 0; }
+        p { font-size: 16px; line-height: 1.6; color: var(--dark); margin-bottom: 20px; }
+        
+        .mono-tag {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            background: var(--light);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        /* Interactive Component Elements */
+        .interactive-elements-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 400px;
+            margin-top: 25px;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .styled-input {
+            font-family: var(--font-main);
+            font-size: 15px;
+            padding: 12px 16px;
+            border: 1.5px solid #CBD5E1;
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* Input highlight state */
+        .styled-input:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.15);
+        }
+
+        .btn {
+            font-family: var(--font-main);
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* TASK 2 DESIGN STEERING REFINEMENT: Smooth transformation scale and linear-gradient background */
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #04342C 0%, #0E7490 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(4, 52, 44, 0.25);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--light);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="design-preview-container">
+        <div class="header-brand">
+            <span class="logo-icon">⚓</span>
+            <h1>MedAnchor Study</h1>
+        </div>
+
+        <p>This is the verified static UI design layout preview for the MedAnchor application dashboard environment.</p>
+
+        <h2>Typography Guidelines</h2>
+        <h1>Heading 1 - 32px Bold</h1>
+        <h2>Heading 2 - 24px Semibold</h2>
+        <p>Standard paragraph structure font body scaling is 16px Regular. Technical formulas apply the <span class="mono-tag">JetBrains Mono</span> family stack.</p>
+
+        <h2>UI Components & Interactive Previews</h2>
+        <div class="interactive-elements-wrapper">
+            <div class="field-group">
+                <label for="search">Search topics, questions, or ask MedAnchor...</label>
+                <input type="text" id="search" class="styled-input" placeholder="e.g., Biostatistics, Microbiology...">
+            </div>
+
+            <button class="btn btn-primary">Primary Action Button</button>
+            <button class="btn btn-secondary">Secondary Action Button</button>
+        </div>
+    </div>
+
+</body>
+</html>
+
+
+
