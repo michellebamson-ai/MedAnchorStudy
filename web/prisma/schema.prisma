@@ -1,0 +1,482 @@
+// MedAnchor Study — data layer
+// Mirrors PRD §3 entities. Source of truth for learning content
+// (replaces the prototype's js/data.js).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Identity & personalization (PRD §3.9.2, §5.6) ----------
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  profile       Profile?
+  events        ActivityEvent[]
+  documents     Document[]
+  mastery       TopicMastery[]
+  cardStates    CardReviewState[]
+  caseAttempts  CaseAttempt[]
+  commAttempts  CommAttempt[]
+  quizAttempts  QuizAttempt[]
+  examGoals     ExamGoal[]
+  planItems     PlanItem[]
+  assignments   Assignment[]
+  sources       Source[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  providerId            String
+  accountId             String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, value])
+}
+
+// Student context that drives adaptation everywhere.
+model Profile {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  academicLevel   String  @default("medical_student") // foundation | medical_student | resident | allied
+  courses         String[] @default([])
+  // Customizable preferences (PRD §3.9.2)
+  explanationDepth Int    @default(3)   // 1 concise .. 5 exhaustive
+  questionDifficulty Int @default(3)   // 1 gentle .. 5 exam_pressure
+  teachingStyle   String  @default("step_by_step") // gentle | rapid_fire | exam_pressure | step_by_step
+  studyFormat     String  @default("mixed")
+  remindersOn     Boolean @default(true)
+  reminderTime    String  @default("18:00")
+  theme           String  @default("dark")
+  dailyGoalMinutes Int    @default(60)
+}
+
+// ---------- Curriculum (PRD §3, seeded from prototype data.js) ----------
+
+model Course {
+  id        String   @id @default(cuid())
+  name      String
+  code      String?
+  createdAt DateTime @default(now())
+  topics    Topic[]
+  documents Document[]
+}
+
+model Topic {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  courseId  String?
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  summary   String?
+  // Domain grouping for planner/evidence
+  domain    String   @default("medicine") // medicine | nursing | public_health | pharmacy | allied
+  estMinutes Int     @default(30)
+  order     Int      @default(0)
+
+  concepts     Concept[]
+  cards        Flashcard[]
+  questions    Question[]
+  cases        CaseScenario[]
+  bioModules   BioModule[]
+  mastery      TopicMastery[]
+  planItems    PlanItem[]
+
+  @@index([courseId])
+}
+
+model Concept {
+  id        String @id @default(cuid())
+  topicId   String
+  topic     Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  slug      String
+  term      String
+  definition String
+  aliases   String[] @default([])
+  keyPoints String[] @default([])
+  formula   String?
+  difficulty Int     @default(3)
+  prereqs    String[] @default([])
+}
+
+// ---------- Uploaded material (PRD §3.2, §5.2) ----------
+
+model Document {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId     String?
+  course       Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  title        String
+  originalName String
+  // pdf | slides | docx | text | image | audio | other
+  kind         String   @default("other")
+  mimeType     String?
+  bytes        Int      @default(0)
+  storedPath   String
+  extractedText String?
+  status       String   @default("uploaded") // uploaded | extracting | analyzed | failed
+  error        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  concepts     DocConcept[]
+  artifacts    Artifact[]
+  sources      Source[]
+
+  @@index([userId, createdAt])
+}
+
+model DocConcept {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  label      String
+  kind       String   @default("concept") // concept | definition | formula | term | fact | difficulty
+  detail     String?
+  topicSlug  String?
+  confidence Float    @default(0.5)
+
+  @@index([documentId])
+}
+
+// Generated study resources (PRD §3.2)
+model Artifact {
+  id         String   @id @default(cuid())
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  // breakdown | summary | revision_notes | flashcards | questions | explanation
+  // | formula_walkthrough | diagram_labeling | quick_review | application | case_scenario
+  kind       String
+  title      String
+  body       Json
+  // Generation controls
+  detailLevel   Int    @default(3)
+  style         String @default("step_by_step")
+  format        String @default("markdown")
+  difficulty    Int    @default(3)
+  objective     String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ---------- Teach Me / practice / cases (PRD §3.1, §3.3) ----------
+
+model Question {
+  id          String   @id @default(cuid())
+  topicId     String?
+  topic       Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  stem        String
+  choices     Json
+  answerIndex Int
+  // why each option is right/wrong — supports annotated feedback (PRD §4.3)
+  annotations Json?
+  explanation String
+  difficulty  Int      @default(3)
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+
+  attempts    QuizAttempt[]
+}
+
+model QuizAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String?
+  question   Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  topicSlug  String?
+  mode       String   @default("practice") // practice | mock_exam | custom
+  correct    Boolean
+  score      Int?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model CaseScenario {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  domain      String   @default("clinical") // clinical | public_health | pharmacology | anatomy | research
+  topicSlug   String?
+  topic       Topic?   @relation(fields: [topicSlug], references: [slug], onDelete: SetNull)
+  difficulty  Int      @default(3)
+  summary     String
+  steps       Json     // progressive disclosure: prompt, choices, correct, feedback
+  createdAt   DateTime @default(now())
+
+  attempts    CaseAttempt[]
+}
+
+model CaseAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseId    String
+  case      CaseScenario @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  topicSlug String?
+  steps     Json
+  score     Int?
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model CommScenario {
+  id         String @id @default(cuid())
+  slug       String @unique
+  title      String
+  // patient | caregiver | community_member | colleague
+  character  String @default("patient")
+  kind       String @default("history_taking") // history_taking | health_education | motivational_interviewing | bad_news | public_health
+  difficulty Int    @default(3)
+  brief      String
+  opening    String
+  rubric     Json
+  soapRubric Json?
+  createdAt  DateTime @default(now())
+
+  attempts   CommAttempt[]
+}
+
+model CommAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenarioId String
+  scenario   CommScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  transcript Json
+  scores     Json     // clarity, questioning, empathy, missed_info
+  feedback   String?
+  soapNote   String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ---------- Flashcards + spaced repetition (PRD §3.9.5) ----------
+
+model Flashcard {
+  id          String   @id @default(cuid())
+  topicId     String?
+  topic       Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  front       String
+  back        String
+  hint        String?
+  tags        String[] @default([])
+  origin      String   @default("seed") // seed | generated | mistake
+  createdAt   DateTime @default(now())
+
+  states      CardReviewState[]
+}
+
+model CardReviewState {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId     String
+  card       Flashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  ease       Float     @default(2.5)
+  intervalDays Int     @default(0)
+  reps       Int       @default(0)
+  lapses     Int       @default(0)
+  dueAt      DateTime  @default(now())
+  lastSeen   DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([userId, cardId])
+  @@index([userId, dueAt])
+}
+
+// ---------- Biostatistics & research (PRD §3.4) ----------
+
+model BioModule {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  topicSlug   String?
+  topic       Topic?   @relation(fields: [topicSlug], references: [slug], onDelete: SetNull)
+  objective   String
+  formula     String?
+  whenToUse   String
+  steps       Json
+  selfCheck   Json
+  commonErrors Json?
+  createdAt   DateTime @default(now())
+}
+
+// ---------- Research & Evidence Engine (PRD §3.9.1, §3.5) ----------
+
+model Source {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId  String?
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  title       String
+  // peer_reviewed | systematic_review | clinical_guideline | public_health_guideline
+  // | government | organization | textbook | uploaded
+  sourceType  String
+  publisher   String?
+  year        Int?
+  url         String?
+  identifier  String?
+  abstract    String?
+  // honest labelling when coverage is limited (PRD §4.3)
+  scopeNote   String?
+  quality     Json?
+  createdAt   DateTime @default(now())
+
+  citations   Citation[]
+}
+
+model Citation {
+  id        String   @id @default(cuid())
+  sourceId  String
+  source    Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  // which surface cited it: biostat | knowledge | planner | artifact
+  usedIn    String
+  locator   String?
+  claim     String?
+  stance    String?  // supports | contradicts | qualifies
+  createdAt DateTime @default(now())
+}
+
+// ---------- Planner & exams (PRD §3.6) ----------
+
+model ExamGoal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  course    String?
+  examDate  DateTime
+  blueprint Json?
+  createdAt DateTime @default(now())
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  course      String?
+  kind        String   @default("assignment") // assignment | presentation | project | revision
+  dueAt       DateTime?
+  status      String   @default("open") // open | in_progress | done
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model PlanItem {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicSlug  String?
+  topic      Topic?   @relation(fields: [topicSlug], references: [slug], onDelete: SetNull)
+  title      String
+  // quick | deep | cram | revision | catch_up
+  mode       String   @default("deep")
+  activity   String   @default("teach_me")
+  scheduledFor DateTime
+  dueAt      DateTime?
+  estMinutes Int      @default(30)
+  priority   Int      @default(3)
+  status     String   @default("planned") // planned | done | missed | rescheduled
+  origin     String   @default("auto") // auto | spaced_repetition | manual
+  completedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, scheduledFor])
+}
+
+// ---------- Mastery & the closed loop (PRD §3.8, §6) ----------
+
+// Multi-signal, not a single score (PRD §3.8).
+model TopicMastery {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicSlug  String?
+  topic      Topic?   @relation(fields: [topicSlug], references: [slug], onDelete: SetNull)
+  // strong | needs_review | needs_attention
+  status     String   @default("needs_attention")
+  score      Float    @default(0)
+  signals    Json?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, topicSlug])
+}
+
+// The spine of the closed loop: every feature appends here, and
+// progress/planner/spaced-repetition read from it.
+model ActivityEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // teach_me | explain_back | quiz | flashcard | case | biostat | communicate
+  // | analyze | generate | plan | evidence | assignment
+  kind      String
+  activity  String
+  topicSlug String?
+  score     Float?
+  maxScore  Float?
+  detail    Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, kind, topicSlug])
+}
