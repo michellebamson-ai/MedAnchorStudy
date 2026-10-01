@@ -14,30 +14,31 @@
   --brand-400: #2bb3ba;
   --brand-300: #6fd3d6;
 
-  /* --- Dark theme surfaces --------------------------------------------- */
-  --bg: #07141f;
-  --bg-2: #0d1f2b;
-  --panel: #102a39;
-  --panel-2: #123449;
-  --panel-soft: rgba(255, 255, 255, 0.03);
-  --line: rgba(145, 214, 255, 0.18);
-  --line-strong: rgba(145, 214, 255, 0.26);
+  /* --- Surfaces & text (LIGHT is the default theme) -------------------- */
+  /* Light values live here so the app opens light with no flash and no
+     JavaScript. Dark is the opt-in override below. */
+  --bg: #f6f9fb;
+  --bg-2: #eff5f8;
+  --panel: #ffffff;
+  --panel-2: #f6fafc;
+  --panel-soft: rgba(4, 52, 44, 0.02);
+  --line: rgba(4, 52, 44, 0.12);
+  --line-strong: rgba(4, 52, 44, 0.2);
 
-  /* --- Text -------------------------------------------------------------- */
-  --text: #eaf6fb;
-  --text-2: #a9c6d4;
-  --text-3: #7593a3;
-  --text-inverse: #052028;
+  --text: #08222c;
+  --text-2: #3d5a68;
+  --text-3: #6b8797;
+  --text-inverse: #f6f9fb;
 
   /* --- Semantic ---------------------------------------------------------- */
-  --ok: #35c88f;
-  --ok-soft: rgba(53, 200, 143, 0.14);
-  --warn: #e8b64c;
-  --warn-soft: rgba(232, 182, 76, 0.14);
-  --danger: #f2705f;
-  --danger-soft: rgba(242, 112, 95, 0.14);
-  --info: #56b6e8;
-  --info-soft: rgba(86, 182, 232, 0.14);
+  --ok: #12855c;
+  --ok-soft: rgba(18, 133, 92, 0.12);
+  --warn: #a8740c;
+  --warn-soft: rgba(168, 116, 12, 0.12);
+  --danger: #c23f2c;
+  --danger-soft: rgba(194, 63, 44, 0.12);
+  --info: #1c6f96;
+  --info-soft: rgba(28, 111, 150, 0.12);
 
   /* --- Mastery statuses (PRD §3.8) -------------------------------------- */
   --status-strong: var(--ok);
@@ -81,9 +82,9 @@
   --r-full: 999px;
 
   /* --- Elevation ---------------------------------------------------------- */
-  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --sh-2: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --sh-3: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --sh-1: 0 1px 2px rgba(4, 52, 44, 0.08);
+  --sh-2: 0 4px 12px rgba(4, 52, 44, 0.1);
+  --sh-3: 0 12px 32px rgba(4, 52, 44, 0.14);
   --sh-glow: 0 0 0 3px rgba(14, 116, 144, 0.35), 0 8px 24px rgba(14, 116, 144, 0.28);
 
   /* --- Motion ------------------------------------------------------------- */
@@ -97,37 +98,39 @@
   --sidebar-w: 264px;
   --topbar-h: 64px;
   --content-max: 1180px;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-/* Light theme: tokens only. No component should need to change. */
-[data-theme="light"] {
-  --bg: #f4f8fa;
-  --bg-2: #eaf2f6;
-  --panel: #ffffff;
-  --panel-2: #f6fafc;
-  --panel-soft: rgba(4, 52, 44, 0.02);
-  --line: rgba(4, 52, 44, 0.12);
-  --line-strong: rgba(4, 52, 44, 0.2);
+/* Dark theme: opt-in via [data-theme="dark"] on <html>. Same tokens, different
+   surfaces — the brand ramp above is deliberately shared and unchanged. */
+[data-theme="dark"] {
+  --bg: #07141f;
+  --bg-2: #0d1f2b;
+  --panel: #102a39;
+  --panel-2: #123449;
+  --panel-soft: rgba(255, 255, 255, 0.03);
+  --line: rgba(145, 214, 255, 0.18);
+  --line-strong: rgba(145, 214, 255, 0.26);
 
-  --text: #08222c;
-  --text-2: #3d5a68;
-  --text-3: #6b8797;
-  --text-inverse: #f4f8fa;
+  --text: #eaf6fb;
+  --text-2: #a9c6d4;
+  --text-3: #7593a3;
+  --text-inverse: #052028;
 
-  --ok: #12855c;
-  --ok-soft: rgba(18, 133, 92, 0.12);
-  --warn: #a8740c;
-  --warn-soft: rgba(168, 116, 12, 0.12);
-  --danger: #c23f2c;
-  --danger-soft: rgba(194, 63, 44, 0.12);
-  --info: #1c6f96;
-  --info-soft: rgba(28, 111, 150, 0.12);
+  --ok: #35c88f;
+  --ok-soft: rgba(53, 200, 143, 0.14);
+  --warn: #e8b64c;
+  --warn-soft: rgba(232, 182, 76, 0.14);
+  --danger: #f2705f;
+  --danger-soft: rgba(242, 112, 95, 0.14);
+  --info: #56b6e8;
+  --info-soft: rgba(86, 182, 232, 0.14);
 
-  --sh-1: 0 1px 2px rgba(4, 52, 44, 0.08);
-  --sh-2: 0 4px 12px rgba(4, 52, 44, 0.1);
-  --sh-3: 0 12px 32px rgba(4, 52, 44, 0.14);
-  color-scheme: light;
+  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sh-2: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --sh-3: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+  color-scheme: dark;
 }
 
 *,

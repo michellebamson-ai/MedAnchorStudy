@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Brand, Nav } from "@/components/nav";
+import { ThemeSwitch } from "@/components/theme-switch";
 
 const TITLES: Record<string, string> = {
   dashboard: "Dashboard",
@@ -54,6 +55,7 @@ export function Shell({
         <header className="topbar">
           <div className="topbar-title">{TITLES[section] ?? "MedAnchor Study"}</div>
           <div className="topbar-right">
+            <ThemeSwitch />
             <div className="streak">
               <span aria-hidden="true">✦</span>
               <span>{streak}</span>

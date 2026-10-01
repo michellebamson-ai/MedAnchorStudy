@@ -26,13 +26,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         {/*
-          Apply the saved theme before first paint so a light-theme user never
-          sees a dark flash. Deliberately inline and tiny — this runs ahead of
-          hydration, so it cannot depend on React.
+          Light is the default in tokens.css, so a first-time visitor needs no
+          JavaScript at all. This only restores an explicit dark choice, and it
+          runs before paint so the toggle never flashes. Deliberately inline:
+          it executes ahead of hydration, so it cannot depend on React.
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("medanchor-theme");if(t==="light"||t==="dark"){document.documentElement.dataset.theme=t}}catch(e){}`,
+            __html: `try{if(localStorage.getItem("medanchor-theme")==="dark"){document.documentElement.dataset.theme="dark"}}catch(e){}`,
           }}
         />
       </head>

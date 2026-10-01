@@ -3,21 +3,22 @@
 import { useEffect, useState } from "react";
 
 /**
- * Theme switcher. Dark is the default; light is a pure token swap.
+ * Theme switcher for the gallery. The product default is light (see
+ * ThemeSwitch for the in-app control); this one is the explicit A/B toggle.
  *
  * The attribute must live on <html>, not a wrapper: `body` resolves its own
  * colour from the root tokens, so a scoped override would leave body-level
  * text (all headings, unstyled spans) in the old theme.
  */
-export function ThemeToggle({ initial = "dark" }: { initial?: "dark" | "light" }) {
-  const [theme, setTheme] = useState<"dark" | "light">(initial);
+export function ThemeToggle({ initial = "light" }: { initial?: "light" | "dark" }) {
+  const [theme, setTheme] = useState<"light" | "dark">(initial);
 
-  // Honour `?theme=light` on first paint of this route.
+  // Honour `?theme=dark` on first paint of this route.
   useEffect(() => {
     document.documentElement.dataset.theme = initial;
   }, [initial]);
 
-  function apply(next: "dark" | "light") {
+  function apply(next: "light" | "dark") {
     setTheme(next);
     document.documentElement.dataset.theme = next;
     try {
@@ -30,18 +31,18 @@ export function ThemeToggle({ initial = "dark" }: { initial?: "dark" | "light" }
   return (
     <div className="row" style={{ gap: "var(--sp-2)" }}>
       <button
-        className={theme === "dark" ? "btn btn-primary btn-sm" : "btn btn-sm"}
-        onClick={() => apply("dark")}
-        type="button"
-      >
-        Dark
-      </button>
-      <button
         className={theme === "light" ? "btn btn-primary btn-sm" : "btn btn-sm"}
         onClick={() => apply("light")}
         type="button"
       >
         Light
+      </button>
+      <button
+        className={theme === "dark" ? "btn btn-primary btn-sm" : "btn btn-sm"}
+        onClick={() => apply("dark")}
+        type="button"
+      >
+        Dark
       </button>
     </div>
   );

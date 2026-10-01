@@ -9,18 +9,18 @@ export const metadata = { title: "Design System" };
  * built from these tokens and blocks; if something isn't here, it doesn't ship.
  */
 export default async function DesignPage({ searchParams }: PageProps<"/design">) {
-  // `?theme=light` renders the gallery in light mode so both themes can be
-  // reviewed (and linked to) without clicking. Everything is a token swap.
+  // `?theme=dark` renders the gallery in dark mode so both themes can be
+  // reviewed (and linked to) without clicking. Light is the product default.
   const params = await searchParams;
   const forced = Array.isArray(params.theme) ? params.theme[0] : params.theme;
-  const theme = forced === "light" ? "light" : "dark";
+  const theme = forced === "dark" ? "dark" : "light";
 
   return (
     <div className="content" style={{ maxWidth: 1180 }}>
       <PageHead
         eyebrow="Phase 1 · Design system"
         title="MedAnchor component gallery"
-        lede="Token-driven, dark by default, light by token swap. Mobile-first, keyboard-operable, screen-reader labelled."
+        lede="Light by default, dark available from the top bar. Token-driven: both themes are the same components with different variable values."
         action={<ThemeToggle initial={theme} />}
       />
 

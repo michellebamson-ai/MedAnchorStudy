@@ -131,6 +131,30 @@
   border-radius: var(--r-full);
 }
 
+.theme-switch {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  cursor: pointer;
+  transition: background var(--dur-2) var(--ease),
+    color var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.theme-switch:hover {
+  background: var(--panel-2);
+  color: var(--text);
+  border-color: var(--brand-500);
+  transform: translateY(-2px);
+  box-shadow: var(--sh-glow);
+}
+
 .avatar {
   width: 34px;
   height: 34px;
