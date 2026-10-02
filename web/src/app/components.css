@@ -22,11 +22,11 @@
   flex-wrap: wrap;
 }
 .section-title {
-  font-family: var(--font-serif);
-  font-weight: 500;
-  font-size: var(--fs-section);
-  line-height: 1.22;
-  letter-spacing: -0.01em;
+  font-family: var(--font-sans);
+  font-size: var(--section-size);
+  font-weight: 700;
+  line-height: var(--section-lh);
+  letter-spacing: var(--section-tracking);
   color: var(--text);
 }
 .section-note { font-size: var(--fs-sm); color: var(--text-3); }
@@ -803,11 +803,13 @@
 
 .page-head { margin-bottom: var(--sp-10); }
 .page-head h1 {
-  font-family: var(--font-serif);
-  font-weight: 500;
-  font-size: var(--fs-title);
-  line-height: 1.14;
-  letter-spacing: -0.014em;
+  font-family: var(--font-sans);
+  font-size: var(--hero-size);
+  font-weight: 700;
+  line-height: var(--hero-lh);
+  letter-spacing: var(--hero-tracking);
+  color: var(--text);
+  margin: 0;
   max-width: 22ch;
 }
 .page-head .lede {

@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Newsreader } from "next/font/google";
+import { Geist_Mono, Inter, Newsreader } from "next/font/google";
+import { isBypassOn } from "@/lib/bypass";
 import "./tokens.css";
 import "./components.css";
 
-// Two-font system (design spec §6): a calm editorial serif carries page
-// titles, major section headings and learning statements; Geist stays the
-// primary interface font for everything else.
-const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
+// Type system: Inter carries body text and headings; Newsreader (serif) is
+// reserved for learning statements only. Mono for code/formulas.
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"] });
 const newsreader = Newsreader({
   variable: "--font-display",
@@ -33,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable}`}
+      className={`${inter.variable} ${geistMono.variable} ${newsreader.variable}`}
       suppressHydrationWarning
     >
       <head>
@@ -49,7 +49,24 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {isBypassOn() ? (
+          <div
+            style={{
+              background: "#a8740c",
+              color: "#fff",
+              textAlign: "center",
+              fontSize: "0.75rem",
+              padding: "4px 8px",
+              fontWeight: 600,
+            }}
+          >
+            Demo mode — sign-in is bypassed (BYPASS_AUTH=1 in web/.env). Delete that line to
+            re-enable auth.
+          </div>
+        ) : null}
+        {children}
+      </body>
     </html>
   );
 }
