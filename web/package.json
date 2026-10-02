@@ -13,6 +13,7 @@
     "db:studio": "prisma studio",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "smoke": "tsx scripts/smoke.ts",
+    "smoke:materials": "tsx scripts/smoke-materials.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

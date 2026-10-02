@@ -1,208 +1,318 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Shell } from "@/components/shell";
-import { Bar, Empty, PageHead, Ring, Stat, StatusBadge, Steps } from "@/components/ui";
+import { Bar, Empty, Ring, Stat } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { getStudentContext } from "@/lib/personalization";
 import { masteryOverview, recommendNext } from "@/lib/mastery";
 import { recentActivity } from "@/lib/activity";
+import { dueCards } from "@/lib/spaced-repetition";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "Home" };
 
 /**
- * Dashboard — answers "what should I do next?" (PRD §5.4), not just
- * "what happened?" (PRD §3.8).
+ * Home dashboard (ONBOARDING_SPEC.md).
+ *
+ * Greeting + tutor card → Today's Study → Quick Access, with a right column
+ * (progress ring + legend + focus area, continue learning) and a help banner.
  */
 export default async function DashboardPage() {
   const user = await getCurrentUser();
 
-  // Until sign-in exists, fall back to seeded content so the app is usable.
-  const [topics, mastery, activity] = await Promise.all([
-    prisma.topic.findMany({ orderBy: { order: "asc" }, take: 5 }),
-    user ? masteryOverview(user.id) : Promise.resolve([]),
-    user ? recentActivity(user.id, 6) : Promise.resolve([]),
-  ]);
+  const topics = await prisma.topic.findMany({ orderBy: { order: "asc" } });
+  const searchTopics = topics.map((t) => ({ slug: t.slug, title: t.title }));
 
   if (!user) {
     return (
-      <Shell section="dashboard" focus="Sign in to unlock your learning loop">
-        <PageHead
-          eyebrow="MedAnchor Study"
-          title="Your learning workspace"
-          lede="Upload a lecture, get taught, apply it in a case, and let the platform decide what to study next."
-        />
-        <div className="stack">
-          <Empty
-            title="Sign in to personalise this workspace"
-            action={
-              <a className="btn btn-primary" href="/login">
-                Sign in
-              </a>
-            }
-          >
-            The database is seeded with {topics.length} topics, 4 cases, 14 flashcards and 9
-            biostatistics modules from your prototype content.
-          </Empty>
+      <Shell section="dashboard" topics={searchTopics}>
+        <div className="page-head">
+          <span className="eyebrow">MedAnchor Study</span>
+          <h1 className="display">Your learning workspace</h1>
+          <p className="lede">
+            Upload a lecture, get taught, apply it in a case — and let MedAnchor decide what
+            matters next.
+          </p>
         </div>
+        <Empty
+          title="Sign in to personalise this workspace"
+          action={
+            <Link className="btn btn-primary" href="/login">
+              Sign in
+            </Link>
+          }
+        >
+          Your content is ready: {topics.length} topics, 4 clinical and public-health cases, 14
+          flashcards and 9 biostatistics modules.
+        </Empty>
       </Shell>
     );
   }
 
   const ctx = await getStudentContext(user.id);
-  const weak = mastery.filter((m) => m.status !== "strong").slice(0, 3);
-  const today = new Date();
+  const [mastery, activity, due] = await Promise.all([
+    masteryOverview(user.id),
+    recentActivity(user.id, 6),
+    dueCards(user.id, 20),
+  ]);
+
+  const firstName = (ctx.name ?? "there").split(" ")[0];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const dayEmoji = hour < 12 ? "☀" : hour < 18 ? "◐" : "☾";
+
+  const now = new Date();
   const todaysPlan = await prisma.planItem.findMany({
     where: {
       userId: user.id,
       status: "planned",
-      scheduledFor: { gte: new Date(today.getTime() - 86_400_000), lte: new Date(today.getTime() + 86_400_000) },
+      scheduledFor: {
+        gte: new Date(now.getTime() - 86_400_000),
+        lte: new Date(now.getTime() + 86_400_000),
+      },
     },
     orderBy: { priority: "asc" },
-    take: 4,
+    take: 6,
   });
 
+  const totalMinutes = todaysPlan.reduce((s, p) => s + p.estMinutes, 0);
+  const studied = mastery.filter((m) => m.attempts > 0).length;
   const avgScore = mastery.length
     ? Math.round((mastery.reduce((s, m) => s + m.score, 0) / mastery.length) * 100)
     : 0;
-  const strongCount = mastery.filter((m) => m.status === "strong").length;
+
+  const strong = mastery.filter((m) => m.status === "strong");
+  const needsReview = mastery.filter((m) => m.status === "needs_review");
+  const needsAttention = mastery.filter((m) => m.status === "needs_attention");
+  const focus = needsAttention[0] ?? needsReview[0] ?? null;
+
+  const displayName = ctx.name ?? "Student";
+  const displayRole = `${(ctx.academicLevel ?? "medical_student").replace(/_/g, " ")} · ${
+    ctx.courses[0] ?? "Medicine"
+  }`;
 
   return (
     <Shell
       section="dashboard"
-      streak={0}
-      initial={(ctx.name ?? "S").slice(0, 1).toUpperCase()}
-      focus={todaysPlan[0]?.title ?? "No plan yet — set an exam date to get started"}
+      name={displayName}
+      role={displayRole}
+      topics={searchTopics}
+      searchPlaceholder="Search topics, questions, or ask MedAnchor…"
     >
-      <PageHead
-        eyebrow={`Welcome back${ctx.name ? `, ${ctx.name}` : ""}`}
-        title="Today's focus"
-        lede="One clear next step, drawn from your weakest topics and your upcoming deadlines."
-        action={
-          <a className="btn btn-primary" href="/plan">
-            Open study plan
-          </a>
-        }
-      />
-
-      <div className="stack">
-        <div className="grid grid-4">
-          <Stat label="Topics covered" value={`${mastery.filter((m) => m.attempts > 0).length}/${mastery.length}`} hint="with recorded activity" />
-          <Stat label="Strong topics" value={strongCount} hint="multi-signal, not one quiz" />
-          <Stat label="Average mastery" value={`${avgScore}%`} hint="across all topics" />
-          <div className="stat row" style={{ gap: "var(--sp-3)" }}>
-            <Ring pct={avgScore} />
+      <div className="dash">
+        <div className="dash-main">
+          {/* ---------------- Top header ---------------- */}
+          <div className="dash-head">
             <div>
-              <div className="stat-label">Daily goal</div>
-              <div className="stat-value" style={{ fontSize: "var(--fs-lg)" }}>
-                {ctx.dailyGoalMinutes}m
+              <h1 className="display">
+                {greeting}, {firstName} <span aria-hidden="true">{dayEmoji}</span>
+              </h1>
+              <p className="lede">Here’s what needs your attention today.</p>
+            </div>
+            <Link className="tutor-card" href="/teach">
+              <span className="tutor-icon" aria-hidden="true">
+                ◉
+              </span>
+              <span>
+                <span className="tutor-title">MedAnchor Tutor</span>
+                <span className="tutor-sub">Let’s make today count.</span>
+              </span>
+              <span className="tutor-go" aria-hidden="true">
+                →
+              </span>
+            </Link>
+          </div>
+
+          {/* ---------------- Today's Study ---------------- */}
+          <section className="dash-section" aria-labelledby="today-heading">
+            <div className="dash-row-head">
+              <div>
+                <h2 id="today-heading" className="display-sm">
+                  <span aria-hidden="true">▦</span> Today’s Study
+                </h2>
+                <p className="list-sub">
+                  {todaysPlan.length} topics · {totalMinutes} minutes planned
+                </p>
               </div>
+              <Link className="btn btn-ghost btn-sm" href="/plan">
+                View All →
+              </Link>
             </div>
-          </div>
-        </div>
 
-        <section className="card">
-          <div className="row-between">
-            <h2 className="card-title">Do this next</h2>
-            <span className="badge badge-info">Recommended</span>
-          </div>
-          {weak.length === 0 ? (
-            <p className="card-sub" style={{ marginTop: "var(--sp-3)" }}>
-              No weak topics yet. Start a Teach Me session or run a case to begin building your profile.
-            </p>
-          ) : (
-            <div className="stack-sm" style={{ marginTop: "var(--sp-4)" }}>
-              {weak.map((m) => (
-                <div key={m.topicSlug} className="list-row">
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="row-between">
-                      <span className="list-title">{m.title}</span>
-                      <StatusBadge status={m.status} />
-                    </div>
-                    <div className="list-sub" style={{ marginTop: 4 }}>
-                      {recommendNext(m).join(" → ")}
-                    </div>
-                    <div style={{ marginTop: "var(--sp-2)" }}>
-                      <Bar pct={m.score * 100} status={m.status} />
-                    </div>
-                  </div>
-                  <a className="btn btn-primary btn-sm" href={`/teach/${m.topicSlug}`}>
-                    Start
-                  </a>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <div className="grid grid-2">
-          <section className="card">
-            <h2 className="card-title">Today's plan</h2>
             {todaysPlan.length === 0 ? (
-              <p className="card-sub" style={{ marginTop: "var(--sp-2)" }}>
-                Nothing scheduled. Set an exam date or add an assignment and the planner will build your week.
-              </p>
-            ) : (
-              <div className="stack-sm" style={{ marginTop: "var(--sp-3)" }}>
-                {todaysPlan.map((item) => (
-                  <div key={item.id} className="list-row">
-                    <div style={{ flex: 1 }}>
-                      <div className="list-title">{item.title}</div>
-                      <div className="list-sub">
-                        {item.mode} · {item.estMinutes} min · {item.activity.replace(/_/g, " ")}
-                      </div>
-                    </div>
-                    <span className="badge badge-neutral">P{item.priority}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="card">
-            <h2 className="card-title">Recent activity</h2>
-            {activity.length === 0 ? (
-              <p className="card-sub" style={{ marginTop: "var(--sp-2)" }}>
-                Your learning activity will appear here. Every feature you use feeds the loop.
-              </p>
-            ) : (
-              <div className="stack-sm" style={{ marginTop: "var(--sp-3)" }}>
-                {activity.map((e) => (
-                  <div key={e.id} className="list-row">
-                    <div style={{ flex: 1 }}>
-                      <div className="list-title">{e.activity.replace(/_/g, " ")}</div>
-                      <div className="list-sub">
-                        {e.topicSlug ?? "general"} · {e.createdAt.toLocaleString()}
-                      </div>
-                    </div>
-                    {e.score != null ? (
-                      <span className={`badge ${e.score >= 0.75 ? "badge-strong" : e.score >= 0.45 ? "badge-review" : "badge-attention"}`}>
-                        {Math.round(e.score * 100)}%
-                      </span>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-
-        {ctx.upcoming.length > 0 && (
-          <section className="card">
-            <h2 className="card-title">Upcoming</h2>
-            <div className="grid grid-3" style={{ marginTop: "var(--sp-3)" }}>
-              {ctx.upcoming.map((u) => (
-                <div key={u.title} className="list-row">
-                  <div>
-                    <div className="list-title">{u.title}</div>
-                    <div className="list-sub">
-                      {u.kind} · {u.date.toLocaleDateString()}
-                    </div>
-                  </div>
+              <div className="surface">
+                <p className="card-sub" style={{ margin: 0 }}>
+                  Nothing scheduled yet. Set an exam date and the planner will build your week
+                  around your weak topics.
+                </p>
+                <div style={{ marginTop: "var(--sp-4)" }}>
+                  <Link className="btn btn-primary btn-sm" href="/plan">
+                    Build my plan
+                  </Link>
                 </div>
+              </div>
+            ) : (
+              <div className="study-strip">
+                {todaysPlan.map((item) => (
+                  <article key={item.id} className="study-card">
+                    <span className="study-icon" aria-hidden="true">
+                      {item.activity === "flashcard"
+                        ? "▤"
+                        : item.activity === "case"
+                          ? "⚑"
+                          : item.activity === "quiz"
+                            ? "✎"
+                            : "◆"}
+                    </span>
+                    <h3 className="study-title">{item.title}</h3>
+                    <p className="list-sub">
+                      {item.estMinutes} min · {item.mode.replace(/_/g, " ")}
+                    </p>
+                    <div className="study-foot">
+                      <Link
+                        className="btn btn-primary btn-sm"
+                        href={
+                          item.activity === "flashcard"
+                            ? "/flashcards"
+                            : item.activity === "case"
+                              ? "/cases"
+                              : item.activity === "quiz"
+                                ? "/exam"
+                                : item.topicSlug
+                                  ? `/teach/${item.topicSlug}`
+                                  : "/teach"
+                        }
+                      >
+                        Start
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* ---------------- Quick Access ---------------- */}
+          <section className="dash-section" aria-labelledby="quick-heading">
+            <h2 id="quick-heading" className="display-sm" style={{ marginBottom: "var(--sp-5)" }}>
+              Quick access
+            </h2>
+            <div className="grid grid-4">
+              {[
+                { href: "/flashcards", icon: "▤", title: "Flashcards", sub: "Review what is due today." },
+                { href: "/exam", icon: "✎", title: "Practice Questions", sub: "Test yourself with feedback." },
+                { href: "/teach", icon: "◆", title: "AI Tutor", sub: "Get taught, step by step." },
+                { href: "/plan", icon: "☷", title: "Study Planner", sub: "See what is scheduled next." },
+              ].map((q) => (
+                <Link key={q.href + q.title} className="surface-tight quick-card" href={q.href}>
+                  <span className="quick-icon" aria-hidden="true">
+                    {q.icon}
+                  </span>
+                  <span className="list-title">{q.title}</span>
+                  <span className="list-sub">{q.sub}</span>
+                </Link>
               ))}
             </div>
           </section>
-        )}
+
+          {/* ---------------- Bottom banner ---------------- */}
+          <section className="banner" aria-label="Need help with a concept">
+            <span className="banner-icon" aria-hidden="true">
+              ◉
+            </span>
+            <span className="banner-text">
+              <span className="banner-title">Need help with a concept?</span>
+              <span className="banner-sub">
+                Ask MedAnchor and get a guided explanation, not just an answer.
+              </span>
+            </span>
+            <Link className="btn btn-primary" href="/teach">
+              Chat Now
+            </Link>
+            <span className="banner-motto" aria-hidden="true">
+              Small steps. Big progress. ∿∿∿
+            </span>
+          </section>
+        </div>
+
+        {/* ---------------- Right column ---------------- */}
+        <div className="dash-side">
+          <section className="surface progress-card" aria-labelledby="progress-heading">
+            <h2 id="progress-heading" className="card-title">
+              Your Progress
+            </h2>
+            <div className="progress-ring">
+              <Ring pct={avgScore} label={`${avgScore}%`} />
+              <p className="list-sub">Overall Completion</p>
+            </div>
+            <ul className="legend">
+              <li>
+                <span className="dot dot-strong" aria-hidden="true" />
+                Strong <b>{strong.length}</b>
+              </li>
+              <li>
+                <span className="dot dot-review" aria-hidden="true" />
+                Needs Review <b>{needsReview.length}</b>
+              </li>
+              <li>
+                <span className="dot dot-attention" aria-hidden="true" />
+                Needs Attention <b>{needsAttention.length}</b>
+              </li>
+            </ul>
+            {focus ? (
+              <div className="focus-callout">
+                <span className="list-sub">Focus area</span>
+                <Link className="list-title" href={`/teach/${focus.topicSlug}`}>
+                  {focus.title}
+                </Link>
+                <Link className="btn btn-ghost btn-sm" href={`/teach/${focus.topicSlug}`}>
+                  {recommendNext(focus)[0]} →
+                </Link>
+              </div>
+            ) : (
+              <p className="list-sub">
+                {studied}/{mastery.length} topics with activity. Start anywhere and this fills in.
+              </p>
+            )}
+          </section>
+
+          <section className="surface" aria-labelledby="continue-heading">
+            <div className="row-between" style={{ marginBottom: "var(--sp-4)" }}>
+              <h2 id="continue-heading" className="card-title" style={{ margin: 0 }}>
+                Continue Learning
+              </h2>
+              <Link className="btn btn-ghost btn-sm" href="/progress">
+                View All →
+              </Link>
+            </div>
+            {activity.length === 0 ? (
+              <p className="card-sub" style={{ margin: 0 }}>
+                Anything you start will appear here so you can pick it back up.
+              </p>
+            ) : (
+              <div className="stack-sm">
+                {activity.slice(0, 4).map((e) => (
+                  <div key={e.id} className="continue-row">
+                    <span className="continue-icon" aria-hidden="true">
+                      {e.kind === "case" ? "⚑" : e.kind === "quiz" ? "✎" : e.kind === "flashcard" ? "▤" : "◆"}
+                    </span>
+                    <span>
+                      <span className="list-title">
+                        {e.activity.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}
+                      </span>
+                      <span className="list-sub" style={{ display: "block" }}>
+                        {e.topicSlug ?? "general"}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="surface" aria-label="Reviews due">
+            <Stat label="Spaced reviews due" value={due.length} hint="scheduled automatically" />
+          </section>
+        </div>
       </div>
     </Shell>
   );

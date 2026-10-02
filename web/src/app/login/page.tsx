@@ -5,7 +5,7 @@ export const metadata = { title: "Sign in" };
 
 export default function LoginPage() {
   return (
-    <Shell section="dashboard" focus="Sign in to start your learning loop">
+    <Shell section="dashboard">
       <div style={{ maxWidth: 460 }}>
         <PageHead
           eyebrow="Welcome"

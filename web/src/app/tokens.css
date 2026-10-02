@@ -46,8 +46,18 @@
   --status-attention: var(--danger);
 
   /* --- Typography -------------------------------------------------------- */
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, "Segoe UI", Inter, Roboto, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Editorial serif — reserved for page titles, major section headings and
+     learning statements. Never used for interface chrome (design spec §6). */
+  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
+
+  /* Display sizes use clamp() so hierarchy survives every viewport without
+     becoming tiny typography on phones (design spec §1: no tiny type). */
+  --fs-display: clamp(2.1rem, 1.35rem + 3.1vw, 3.4rem);
+  --fs-title: clamp(1.6rem, 1.2rem + 1.7vw, 2.3rem);
+  --fs-section: clamp(1.25rem, 1.08rem + 0.7vw, 1.6rem);
+  --fs-lead: clamp(1.0625rem, 1rem + 0.35vw, 1.2rem);
 
   --fs-xs: 0.75rem;
   --fs-sm: 0.875rem;
@@ -58,11 +68,13 @@
   --fs-2xl: 1.875rem;
   --fs-3xl: 2.25rem;
 
-  --lh-tight: 1.25;
-  --lh-normal: 1.55;
-  --lh-loose: 1.75;
+  /* Readable, generous leading — the spec asks for comfortable line height. */
+  --lh-tight: 1.18;
+  --lh-snug: 1.4;
+  --lh-normal: 1.62;
+  --lh-loose: 1.78;
 
-  /* --- Spacing scale (4px base) ------------------------------------------ */
+  /* --- Spacing scale (4px base, opened up for generous whitespace) --------- */
   --sp-1: 0.25rem;
   --sp-2: 0.5rem;
   --sp-3: 0.75rem;
@@ -73,6 +85,11 @@
   --sp-10: 2.5rem;
   --sp-12: 3rem;
   --sp-16: 4rem;
+  --sp-20: 5rem;
+  --sp-24: 6.5rem;
+
+  /* Section rhythm — the primary hierarchy tool in an open canvas. */
+  --section-gap: var(--sp-16);
 
   /* --- Radii -------------------------------------------------------------- */
   --r-sm: 6px;
@@ -82,10 +99,23 @@
   --r-full: 999px;
 
   /* --- Elevation ---------------------------------------------------------- */
-  --sh-1: 0 1px 2px rgba(4, 52, 44, 0.08);
-  --sh-2: 0 4px 12px rgba(4, 52, 44, 0.1);
-  --sh-3: 0 12px 32px rgba(4, 52, 44, 0.14);
-  --sh-glow: 0 0 0 3px rgba(14, 116, 144, 0.35), 0 8px 24px rgba(14, 116, 144, 0.28);
+  --sh-1: 0 1px 2px rgba(4, 52, 44, 0.06);
+  --sh-2: 0 4px 14px rgba(4, 52, 44, 0.07);
+  --sh-3: 0 16px 40px rgba(4, 52, 44, 0.11);
+  --sh-glow: 0 0 0 3px rgba(14, 116, 144, 0.28), 0 8px 24px rgba(14, 116, 144, 0.22);
+
+  /* --- Layered surface system (design spec §6) ---------------------------- */
+  /* Three deliberate levels. The default page is an OPEN CANVAS: most content
+     sits directly on --bg with no container at all, and hierarchy comes from
+     typography, spacing, scale and alignment. Surfaces are earned. */
+  --surface-none: transparent;                 /* open canvas — the default  */
+  --surface-raised: var(--panel);              /* interactive + grouped     */
+  --surface-sunken: var(--bg-2);               /* inputs, wells, code      */
+  --surface-overlay: var(--panel);             /* dialogs, menus, palettes */
+
+  /* Borders exist mainly for controls, not for layout. */
+  --edge-control: rgba(4, 52, 44, 0.16);       /* buttons, inputs, search  */
+  --edge-hairline: rgba(4, 52, 44, 0.08);      /* internal dividers only   */
 
   /* --- Motion ------------------------------------------------------------- */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -127,8 +157,11 @@
   --info-soft: rgba(86, 182, 232, 0.14);
 
   --sh-1: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --sh-2: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --sh-3: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --sh-2: 0 4px 14px rgba(0, 0, 0, 0.34);
+  --sh-3: 0 16px 40px rgba(0, 0, 0, 0.46);
+
+  --edge-control: rgba(145, 214, 255, 0.24);
+  --edge-hairline: rgba(145, 214, 255, 0.12);
 
   color-scheme: dark;
 }
@@ -165,6 +198,44 @@ h4 {
   letter-spacing: -0.01em;
   /* Explicit, so headings never depend on inheriting from body. Without this
      a theme change on <html> alone would leave them the wrong colour. */
+  color: var(--text);
+}
+
+/* Serif is used selectively (design spec §6): page titles, major section
+   headings and learning statements — not every heading, never chrome. */
+.display,
+.serif {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.display {
+  font-size: var(--fs-display);
+  line-height: 1.08;
+}
+.display-sm {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: var(--fs-title);
+  line-height: 1.16;
+  letter-spacing: -0.012em;
+}
+.display-lg {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: var(--fs-section);
+  line-height: 1.25;
+  letter-spacing: -0.008em;
+}
+
+/* A "learning statement" — the sentence a student is meant to read slowly. */
+.statement {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--fs-title);
+  line-height: 1.28;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 

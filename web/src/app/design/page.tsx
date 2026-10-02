@@ -1,5 +1,5 @@
 import { Alert, Bar, Empty, PageHead, Ring, Stat, StatusBadge, Steps } from "@/components/ui";
-import { NAV } from "@/components/nav";
+import { PRACTICE_GROUPS, RESEARCH_GROUPS, SIDEBAR_NAV } from "@/components/nav";
 import { ChatDemo, FlipCardDemo, QuizDemo, ThemeToggle } from "@/components/design/demos";
 
 export const metadata = { title: "Design System" };
@@ -366,24 +366,71 @@ export default async function DesignPage({ searchParams }: PageProps<"/design">)
 
         {/* ---------- Navigation ---------- */}
         <section className="card">
-          <h2 className="card-title">Navigation</h2>
+          <h2 className="card-title">Sidebar navigation</h2>
           <p className="card-sub">
-            One source of truth (<code>src/components/nav.tsx</code>, ADR-1). Current page is marked with{" "}
-            <code>aria-current</code> and an inset rail.
+            Seven main tabs (<code>src/components/nav.tsx</code>, ADR-1). Current page is
+            marked with <code>aria-current</code> and an accent rail. The sidebar is a brand
+            constant: deep teal in both themes.
           </p>
-          <nav className="nav" style={{ marginTop: "var(--sp-4)", maxWidth: 300 }}>
-            {NAV.map((item, i) => (
+          <nav className="side-nav" style={{ marginTop: "var(--sp-4)", maxWidth: 300, background: "linear-gradient(180deg,#06302a,#031a17)", padding: "var(--sp-4)", borderRadius: "var(--r-lg)" }}>
+            {SIDEBAR_NAV.map((item: { href: string; label: string }, i: number) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="nav-link"
-                aria-current={i === 2 ? "page" : undefined}
+                className="side-link"
+                aria-current={i === 0 ? "page" : undefined}
               >
-                <span className="nav-icon" aria-hidden="true">{item.icon}</span>
                 {item.label}
               </a>
             ))}
           </nav>
+          <p className="card-sub" style={{ marginTop: "var(--sp-4)" }}>
+            <strong>Practice groups:</strong>{" "}
+            {PRACTICE_GROUPS.map((g: { group: string }) => g.group).join(" · ")}
+            {"  ·  "}
+            <strong>Research groups:</strong>{" "}
+            {RESEARCH_GROUPS.map((g: { group: string }) => g.group).join(" · ")}
+          </p>
+        </section>
+
+        {/* ---------- Surfaces ---------- */}
+        <section className="card">
+          <h2 className="card-title">Layered surfaces</h2>
+          <p className="card-sub">
+            The page is an open canvas. Surfaces are earned — used for interactive and grouped
+            content, never to box every section.
+          </p>
+          <div className="stack-sm" style={{ marginTop: "var(--sp-4)" }}>
+            <div className="surface">.surface — grouped or interactive content</div>
+            <div className="surface-tight">.surface-tight — compact grouping</div>
+            <div className="surface-sunken">.surface-sunken — inputs, wells, code</div>
+            <div className="surface-flat">.surface-flat — quiet supporting content</div>
+            <div className="surface" style={{ boxShadow: "none", background: "transparent", padding: 0 }}>
+              <span className="list-sub">
+                Open canvas — no container at all. Hierarchy from typography, spacing and scale.
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- Typography roles ---------- */}
+        <section className="card">
+          <h2 className="card-title">Typography roles</h2>
+          <p className="card-sub">
+            Serif used selectively; the sans remains the primary interface font.
+          </p>
+          <div className="stack-sm" style={{ marginTop: "var(--sp-4)" }}>
+            <p className="display" style={{ margin: 0 }}>display — page title (serif)</p>
+            <p className="display-sm" style={{ margin: 0 }}>display-sm — section title (serif)</p>
+            <p className="display-lg" style={{ margin: 0 }}>display-lg — card title (serif)</p>
+            <p className="statement" style={{ margin: 0 }}>
+              statement — a sentence to read slowly
+            </p>
+            <p className="lede" style={{ margin: 0, fontSize: "var(--fs-lead)" }}>
+              lede — introductory paragraph
+            </p>
+            <p className="card-sub" style={{ margin: 0 }}>card-sub — supporting sans copy</p>
+          </div>
         </section>
 
         {/* ---------- Spacing & radius ---------- */}

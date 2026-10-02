@@ -163,6 +163,8 @@ model Document {
   mimeType     String?
   bytes        Int      @default(0)
   storedPath   String
+  // Free-form subject label ("Cardiology", "Biostatistics 101", ...).
+  subject      String?
   extractedText String?
   status       String   @default("uploaded") // uploaded | extracting | analyzed | failed
   error        String?
@@ -172,6 +174,8 @@ model Document {
   concepts     DocConcept[]
   artifacts    Artifact[]
   sources      Source[]
+  flashcards   Flashcard[]
+  questions    Question[]
 
   @@index([userId, createdAt])
 }
@@ -200,6 +204,8 @@ model Artifact {
   kind       String
   title      String
   body       Json
+  // Starred by the student (Notes / Summaries favorites).
+  favorite   Boolean  @default(false)
   // Generation controls
   detailLevel   Int    @default(3)
   style         String @default("step_by_step")
@@ -217,6 +223,11 @@ model Question {
   id          String   @id @default(cuid())
   topicId     String?
   topic       Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  // When generated from the student's own material (MATERIALS_SPEC.md).
+  documentId  String?
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  // "From your material" label — the page or slide it came from.
+  sourcePage  String?
   stem        String
   choices     Json
   answerIndex Int
@@ -237,12 +248,15 @@ model QuizAttempt {
   questionId String?
   question   Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
   topicSlug  String?
+  // Groups attempts into a practice set for history ("Past sets").
+  sessionId  String?
   mode       String   @default("practice") // practice | mock_exam | custom
   correct    Boolean
   score      Int?
   createdAt  DateTime @default(now())
 
   @@index([userId, createdAt])
+  @@index([userId, sessionId])
 }
 
 model CaseScenario {
@@ -313,11 +327,17 @@ model Flashcard {
   id          String   @id @default(cuid())
   topicId     String?
   topic       Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  // When generated from the student's own material (MATERIALS_SPEC.md).
+  // One deck per material is grouped by this id.
+  documentId  String?
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
   front       String
   back        String
   hint        String?
   tags        String[] @default([])
-  origin      String   @default("seed") // seed | generated | mistake
+  // qa | term | formula | concept (MATERIALS_SPEC.md card types)
+  cardType    String   @default("qa")
+  origin      String   @default("seed") // seed | generated | manual | mistake
   createdAt   DateTime @default(now())
 
   states      CardReviewState[]
@@ -335,6 +355,8 @@ model CardReviewState {
   lapses     Int       @default(0)
   dueAt      DateTime  @default(now())
   lastSeen   DateTime?
+  // The student's own note on a card (MATERIALS_SPEC.md).
+  note       String?
   createdAt  DateTime  @default(now())
 
   @@unique([userId, cardId])
