@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Shell } from "@/components/shell";
 import { Bar, Empty, Ring, Stat } from "@/components/ui";
+import { StudyPlanPrompt } from "@/components/study-plan-prompt";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { getStudentContext } from "@/lib/personalization";
@@ -49,11 +50,19 @@ export default async function DashboardPage() {
   }
 
   const ctx = await getStudentContext(user.id);
-  const [mastery, activity, due] = await Promise.all([
+  const [mastery, activity, due, profile, examGoals] = await Promise.all([
     masteryOverview(user.id),
     recentActivity(user.id, 6),
     dueCards(user.id, 20),
+    prisma.profile.findUnique({ where: { userId: user.id } }),
+    prisma.examGoal.count({ where: { userId: user.id } }),
   ]);
+
+  // The study-plan card shows once after first landing: only for students who
+  // finished (or skipped) onboarding, have no exam yet, and haven't closed it
+  // twice already.
+  const showPlanPrompt =
+    !!profile?.onboarded && examGoals === 0 && (profile?.planPromptDismissals ?? 0) < 2;
 
   const firstName = (ctx.name ?? "there").split(" ")[0];
   const hour = new Date().getHours();
@@ -98,6 +107,11 @@ export default async function DashboardPage() {
       topics={searchTopics}
       searchPlaceholder="Search topics, questions, or ask MedAnchor…"
     >
+      {showPlanPrompt ? (
+        <div style={{ marginBottom: "var(--sp-8)" }}>
+          <StudyPlanPrompt />
+        </div>
+      ) : null}
       <div className="dash">
         <div className="dash-main">
           {/* ---------------- Top header ---------------- */}

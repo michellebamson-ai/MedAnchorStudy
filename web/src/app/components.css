@@ -396,6 +396,28 @@
   .banner-motto { display: none; }
 }
 
+/* Study-plan prompt: bottom sheet on phones, inline card on desktop. */
+.plan-prompt {
+  background: var(--surface-raised);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-3);
+  padding: var(--sp-6);
+  border-top: 3px solid var(--brand-500);
+  max-width: 560px;
+}
+@media (max-width: 720px) {
+  .plan-prompt {
+    position: fixed;
+    left: var(--sp-3);
+    right: var(--sp-3);
+    bottom: var(--sp-3);
+    z-index: 50;
+    border-radius: var(--r-xl);
+    max-height: 82dvh;
+    overflow-y: auto;
+  }
+}
+
 /* ---------- Materials (MATERIALS_SPEC.md) ---------------------------------- */
 /* Style rule for the whole area: light background, soft shadows, almost no
    outlines. Teal gradient on bold buttons only (inherited .btn-primary).

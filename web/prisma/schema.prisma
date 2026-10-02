@@ -89,6 +89,13 @@ model Profile {
 
   academicLevel   String  @default("medical_student") // foundation | medical_student | resident | allied
   courses         String[] @default([])
+  // Onboarding (Page 3): year and school live on the profile.
+  year            String?
+  school          String?
+  // True once the welcome flow (Pages 1-3) has been completed or skipped.
+  onboarded       Boolean @default(false)
+  // Study-plan prompt dismissals; stops showing by itself after 2.
+  planPromptDismissals Int @default(0)
   // Customizable preferences (PRD §3.9.2)
   explanationDepth Int    @default(3)   // 1 concise .. 5 exhaustive
   questionDifficulty Int @default(3)   // 1 gentle .. 5 exam_pressure
