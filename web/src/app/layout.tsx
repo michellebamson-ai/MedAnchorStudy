@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Inter, Newsreader } from "next/font/google";
+import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { isBypassOn } from "@/lib/bypass";
 import "./tokens.css";
 import "./components.css";
 
-// Type system: Inter carries body text and headings; Newsreader (serif) is
-// reserved for learning statements only. Mono for code/formulas.
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+// Two-font system: a calm editorial serif carries page titles, major section
+// headings and learning statements; Geist stays the primary interface font.
+const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"] });
 const newsreader = Newsreader({
   variable: "--font-display",
@@ -33,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geistMono.variable} ${newsreader.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable}`}
       suppressHydrationWarning
     >
       <head>

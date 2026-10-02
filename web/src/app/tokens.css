@@ -46,19 +46,18 @@
   --status-attention: var(--danger);
 
   /* --- Typography -------------------------------------------------------- */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Inter, Roboto, Arial, sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, "Segoe UI", Inter, Roboto, Arial, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  /* Serif — reserved for learning statements only (important educational
-     moments). Headings and interface type are Inter. */
+  /* Editorial serif — reserved for page titles, major section headings and
+     learning statements. Never used for interface chrome (design spec §6). */
   --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
 
-  /* Hero + section titles — exact product type system. */
-  --hero-size: 52px;
-  --hero-lh: 1.05;
-  --hero-tracking: -0.03em;
-  --section-size: 36px;
-  --section-lh: 1.1;
-  --section-tracking: -0.025em;
+  /* Display sizes use clamp() so hierarchy survives every viewport without
+     becoming tiny typography on phones (design spec §1: no tiny type). */
+  --fs-display: clamp(2.1rem, 1.35rem + 3.1vw, 3.4rem);
+  --fs-title: clamp(1.6rem, 1.2rem + 1.7vw, 2.3rem);
+  --fs-section: clamp(1.25rem, 1.08rem + 0.7vw, 1.6rem);
+  --fs-lead: clamp(1.0625rem, 1rem + 0.35vw, 1.2rem);
 
   /* Display sizes use clamp() so hierarchy survives every viewport without
      becoming tiny typography on phones (design spec §1: no tiny type). */
@@ -209,61 +208,35 @@ h4 {
   color: var(--text);
 }
 
-/* Headings and interface type are Inter. The serif (.serif, .statement) is
-   reserved for learning statements only. */
-.hero-title {
-  font-family: var(--font-sans);
-  font-size: var(--hero-size);
-  font-weight: 700;
-  line-height: var(--hero-lh);
-  letter-spacing: var(--hero-tracking);
-  color: var(--text);
-  margin: 0;
+/* Serif is used selectively (design spec §6): page titles, major section
+   headings and learning statements — not every heading, never chrome. */
+.display,
+.serif {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.015em;
 }
 
-.section-title {
-  font-family: var(--font-sans);
-  font-size: var(--section-size);
-  font-weight: 700;
-  line-height: var(--section-lh);
-  letter-spacing: var(--section-tracking);
-  color: var(--text);
-  margin: 0;
+.display {
+  font-size: var(--fs-display);
+  line-height: 1.08;
 }
-
-/* Smaller steps of the same sans system, for card titles and sub-heads. */
 .display-sm {
-  font-family: var(--font-sans);
-  font-weight: 700;
+  font-family: var(--font-serif);
+  font-weight: 500;
   font-size: var(--fs-title);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: var(--text);
-  margin: 0;
+  line-height: 1.16;
+  letter-spacing: -0.012em;
 }
 .display-lg {
-  font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: var(--fs-lg);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: var(--fs-section);
   line-height: 1.25;
-  letter-spacing: -0.015em;
-  color: var(--text);
-  margin: 0;
+  letter-spacing: -0.008em;
 }
 
-/* Legacy alias: page titles now use the hero treatment. */
-.display {
-  font-family: var(--font-sans);
-  font-size: var(--hero-size);
-  font-weight: 700;
-  line-height: var(--hero-lh);
-  letter-spacing: var(--hero-tracking);
-  color: var(--text);
-  margin: 0;
-}
-
-/* A "learning statement" — the sentence a student is meant to read slowly.
-   The one place the serif still appears. */
+/* A "learning statement" — the sentence a student is meant to read slowly. */
 .statement {
   font-family: var(--font-serif);
   font-weight: 400;
@@ -271,12 +244,6 @@ h4 {
   line-height: 1.28;
   letter-spacing: -0.01em;
   color: var(--text);
-}
-.serif { font-family: var(--font-serif); }
-
-@media (max-width: 720px) {
-  .hero-title, .display { font-size: 40px; }
-  .section-title { font-size: 29px; }
 }
 
 h1 { font-size: var(--fs-2xl); }
