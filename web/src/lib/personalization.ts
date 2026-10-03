@@ -73,7 +73,7 @@ export async function getStudentContext(userId: string): Promise<StudentContext>
     courses: profile?.courses ?? [],
     explanationDepth: profile?.explanationDepth ?? 3,
     questionDifficulty: profile?.questionDifficulty ?? 3,
-    teachingStyle: (profile?.teachingStyle as StudentContext["teachingStyle"]) ?? "step_by_step",
+    teachingStyle: (profile?.teachingStyle as StudentContext["teachingStyle"]) ?? "gentle",
     studyFormat: profile?.studyFormat ?? "mixed",
     dailyGoalMinutes: profile?.dailyGoalMinutes ?? 60,
     remindersOn: profile?.remindersOn ?? true,

@@ -99,7 +99,7 @@ model Profile {
   // Customizable preferences (PRD §3.9.2)
   explanationDepth Int    @default(3)   // 1 concise .. 5 exhaustive
   questionDifficulty Int @default(3)   // 1 gentle .. 5 exam_pressure
-  teachingStyle   String  @default("step_by_step") // gentle | rapid_fire | exam_pressure | step_by_step
+  teachingStyle   String  @default("gentle") // gentle | rapid_fire | exam_pressure | step_by_step
   studyFormat     String  @default("mixed")
   remindersOn     Boolean @default(true)
   reminderTime    String  @default("18:00")
@@ -447,6 +447,10 @@ model Assignment {
   dueAt       DateTime?
   status      String   @default("open") // open | in_progress | done
   notes       String?
+  // Workspace step completion (TUTOR_SPEC.md): understand → improve.
+  steps       Json?
+  // Document ids the tutor may use for this assignment.
+  materialIds String[] @default([])
   createdAt   DateTime @default(now())
 }
 
