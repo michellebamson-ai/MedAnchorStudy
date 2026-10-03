@@ -16,6 +16,8 @@
     "smoke:materials": "tsx scripts/smoke-materials.ts",
     "smoke:onboarding": "tsx scripts/smoke-onboarding.ts",
     "smoke:tutor": "tsx scripts/smoke-tutor.ts",
+    "smoke:practice": "tsx scripts/smoke-practice.ts",
+    "seed:comm": "tsx scripts/seed-comm.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

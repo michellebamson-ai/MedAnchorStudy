@@ -75,6 +75,34 @@ export interface GeneratedArtifact {
   body: unknown;
 }
 
+export interface RoleplayRequest {
+  character: string; // patient | caregiver | community_member | colleague | community_leader
+  personality: string; // anxious | angry | confused | quiet | talkative | skeptical | cost_worried
+  scenario: string; // history-taking | bad_news | ...
+  brief: string;
+  /** Facts the student must elicit by asking well. */
+  hiddenFacts: string[];
+  alreadyRevealed: string[];
+  /** -2 (shut down) .. +2 (fully open). */
+  rapport: number;
+  challenge?: string;
+  transcript: { role: "student" | "character"; text: string }[];
+  level: Level;
+  examMode: boolean;
+}
+
+export interface RoleplayTurn {
+  /** The character's in-world reply. */
+  text: string;
+  rapportDelta: number;
+  newlyRevealed: string[];
+  /** 0..1 reads on the student's message — feedback fuel. */
+  empathy: number;
+  questioning: number;
+  clarity: number;
+  notes: string[];
+}
+
 export interface AIProvider {
   readonly name: string;
   /** True when output comes from a real model rather than rules. */
@@ -83,4 +111,5 @@ export interface AIProvider {
   teach(req: TeachRequest): Promise<TeachTurn>;
   grade(req: GradeRequest): Promise<GradeResult>;
   generate(req: GenerateRequest): Promise<GeneratedArtifact>;
+  roleplay(req: RoleplayRequest): Promise<RoleplayTurn>;
 }
