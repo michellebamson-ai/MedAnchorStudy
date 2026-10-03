@@ -396,17 +396,23 @@ model Source {
   documentId  String?
   document    Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
   title       String
+  // Free-text author list as published ("World Health Organization",
+  // "Smith J, Jones A"). Used for citations and "More by this author".
+  authors     String?
   // peer_reviewed | systematic_review | clinical_guideline | public_health_guideline
   // | government | organization | textbook | uploaded
   sourceType  String
   publisher   String?
   year        Int?
   url         String?
-  identifier  String?
+  identifier  String? @unique
   abstract    String?
   // honest labelling when coverage is limited (PRD §4.3)
   scopeNote   String?
   quality     Json?
+  // My Sources organization (RESEARCH_SPEC.md §2.4).
+  important   Boolean @default(false)
+  project     String?
   createdAt   DateTime @default(now())
 
   citations   Citation[]
