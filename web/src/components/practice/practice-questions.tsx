@@ -18,6 +18,8 @@ export interface PracticeQData {
     questionIds: string[];
     wrongIds: string[];
   }>;
+  /** Study Plan deep link: preselect the topic filter. */
+  presetTopic?: string | null;
 }
 
 type QType = "practice" | "application" | "diagram";
@@ -37,7 +39,7 @@ function shuffle<T>(list: T[]): T[] {
  */
 export function PracticeQuestions({ data }: { data: PracticeQData }) {
   const [docId, setDocId] = useState("all");
-  const [pickedTopics, setPickedTopics] = useState<string[]>([]);
+  const [pickedTopics, setPickedTopics] = useState<string[]>(() => (data.presetTopic ? [data.presetTopic] : []));
   const [qtype, setQtype] = useState<QType>("practice");
   const [difficulty, setDifficulty] = useState(1);
   const [count, setCount] = useState(10);

@@ -30,6 +30,7 @@ export default async function PracticePage({
   const params = await searchParams;
   const raw = Array.isArray(params.tab) ? params.tab[0] : params.tab;
   const tab: TabId = TABS.some((t) => t.id === raw) ? (raw as TabId) : "cases";
+  const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
   const user = await getCurrentUser().catch(() => null);
   const topics = await prisma.topic.findMany({ orderBy: { order: "asc" } });
@@ -59,7 +60,9 @@ export default async function PracticePage({
     <Shell section="practice" name={user.name ?? "Student"} topics={searchTopics}>
       <PracticeHead tab={tab} />
       {tab === "cases" ? <CasesSection userId={user.id} /> : null}
-      {tab === "questions" ? <QuestionsSection userId={user.id} topics={topics} /> : null}
+      {tab === "questions" ? (
+        <QuestionsSection userId={user.id} topics={topics} presetTopic={str(params.topic) ?? null} />
+      ) : null}
       {tab === "communicate" ? <CommSection userId={user.id} soap={params.soap === "1"} /> : null}
     </Shell>
   );
@@ -114,9 +117,11 @@ async function CasesSection({ userId }: { userId: string }) {
 async function QuestionsSection({
   userId,
   topics,
+  presetTopic,
 }: {
   userId: string;
   topics: Array<{ slug: string; title: string }>;
+  presetTopic: string | null;
 }) {
   const [bank, attempts, mastery, documents] = await Promise.all([
     prisma.question.findMany({
@@ -179,6 +184,7 @@ async function QuestionsSection({
     })),
     documents,
     pastSets,
+    presetTopic: topics.some((t) => t.slug === presetTopic) ? presetTopic : null,
   };
   return <PracticeQuestions data={data} />;
 }

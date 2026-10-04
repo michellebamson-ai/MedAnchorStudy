@@ -96,7 +96,7 @@ export function GlobalSearch({
     <>
       <button className="search-trigger" onClick={() => setOpen(true)} type="button">
         <span aria-hidden="true">⌕</span>
-        <span>{placeholder}</span>
+        <span className="search-trigger-label">{placeholder}</span>
         <span className="kbd">Ctrl K</span>
       </button>
 

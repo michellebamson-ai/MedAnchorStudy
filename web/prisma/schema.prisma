@@ -105,6 +105,14 @@ model Profile {
   reminderTime    String  @default("18:00")
   theme           String  @default("dark")
   dailyGoalMinutes Int    @default(60)
+  // Study Plan (STUDY_PLAN_SPEC.md §7–§9): planning emphasis, weekly
+  // commitment, per-weekday availability in minutes (index 0 = Sunday).
+  planMode        String   @default("deep") // quick | deep | cram | revision | catch_up
+  weeklyHours     Int      @default(10)
+  dayMinutes      Int[]    @default([60, 45, 45, 45, 45, 90, 120])
+  // True once the student has an exam/deadline and an hours preference, so the
+  // full planner can replace the first-run setup card.
+  planSetupDone   Boolean  @default(false)
 }
 
 // ---------- Curriculum (PRD §3, seeded from prototype data.js) ----------
@@ -438,9 +446,17 @@ model ExamGoal {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   course    String?
+  // exam | assignment | presentation | project | revision (STUDY_PLAN_SPEC.md §6)
+  kind      String   @default("exam")
   examDate  DateTime
+  notes     String?
+  completedAt DateTime?
   blueprint Json?
   createdAt DateTime @default(now())
+
+  planItems PlanItem[]
+
+  @@index([userId, examDate])
 }
 
 model Assignment {
@@ -474,12 +490,24 @@ model PlanItem {
   dueAt      DateTime?
   estMinutes Int      @default(30)
   priority   Int      @default(3)
-  status     String   @default("planned") // planned | done | missed | rescheduled
+  // planned | in_progress | done | missed | rescheduled | dropped
+  status     String   @default("planned")
   origin     String   @default("auto") // auto | spaced_repetition | manual
+  // Why the planner chose this, shown to the student ("weakest topic · 12 days
+  // to your exam").
+  reason     String?
+  // Deep link into the surface that runs the activity (STUDY_PLAN_SPEC.md §11).
+  target     String?
+  // Stable key so regeneration replaces a candidate instead of duplicating it.
+  sourceKey  String?
+  // The deadline this work is working towards, when it exists.
+  examGoalId String?
+  examGoal   ExamGoal? @relation(fields: [examGoalId], references: [id], onDelete: SetNull)
   completedAt DateTime?
   createdAt  DateTime @default(now())
 
   @@index([userId, scheduledFor])
+  @@index([userId, status])
 }
 
 // ---------- Mastery & the closed loop (PRD §3.8, §6) ----------

@@ -27,6 +27,11 @@ export default async function TeachPage({
   const user = await getCurrentUser().catch(() => null);
   const topics = await prisma.topic.findMany({ orderBy: { order: "asc" } });
   const searchTopics = topics.map((t) => ({ slug: t.slug, title: t.title }));
+  // Study Plan deep links arrive as ?topic=<slug> so Start opens preselected.
+  const presetTopic =
+    typeof params.topic === "string" && searchTopics.some((t) => t.slug === params.topic)
+      ? params.topic
+      : null;
 
   if (!user) {
     return (
@@ -100,7 +105,14 @@ export default async function TeachPage({
         ? "foundation"
         : "student";
 
-  const setup: TeachSetupData = { topics: searchTopics, materialTopics, last, defaultStyle: style, level };
+  const setup: TeachSetupData = {
+    topics: searchTopics,
+    materialTopics,
+    last,
+    defaultStyle: style,
+    level,
+    presetTopic,
+  };
   const courses =
     profile?.courses?.length
       ? profile.courses

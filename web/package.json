@@ -18,8 +18,10 @@
     "smoke:tutor": "tsx scripts/smoke-tutor.ts",
     "smoke:practice": "tsx scripts/smoke-practice.ts",
     "smoke:research": "tsx scripts/smoke-research.ts",
+    "smoke:plan": "tsx scripts/smoke-plan.ts",
     "seed:comm": "tsx scripts/seed-comm.ts",
     "seed:evidence": "tsx scripts/seed-evidence.ts",
+    "seed:plan-demo": "tsx scripts/seed-plan-demo.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

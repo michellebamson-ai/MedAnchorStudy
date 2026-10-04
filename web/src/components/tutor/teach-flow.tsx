@@ -20,6 +20,8 @@ export interface TeachSetupData {
   last: { topic: string; needsWork: boolean } | null;
   defaultStyle: TeachingStyle;
   level: Level;
+  /** Study Plan deep link: preselect the topic the activity is about. */
+  presetTopic?: string | null;
 }
 
 const STYLES: Array<{ v: TeachingStyle; label: string }> = [
@@ -137,7 +139,10 @@ function TeachSetup({
   setup: TeachSetupData;
   onStart: (s: Session) => void;
 }) {
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState(() => {
+    const preset = setup.presetTopic;
+    return setup.topics.find((t) => t.slug === preset)?.title ?? "";
+  });
   const [pickedDoc, setPickedDoc] = useState<string | null>(null);
   const [style, setStyle] = useState<TeachingStyle>(setup.defaultStyle);
   const [depth, setDepth] = useState(1);
