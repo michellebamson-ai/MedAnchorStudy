@@ -137,6 +137,24 @@ export async function refreshMastery(userId: string, topicSlug: string) {
   return snap;
 }
 
+/**
+ * Stored signals come back from JSON, so `lastStudied` is an ISO string rather
+ * than a Date. Callers do date arithmetic on it, so normalise here once instead
+ * of guarding at every use site.
+ */
+function normalizeSignals(raw: unknown): MasterySnapshot["signals"] {
+  const s = (raw ?? {}) as Partial<MasterySnapshot["signals"]> & { lastStudied?: string | Date | null };
+  const last = s.lastStudied;
+  return {
+    quizzes: s.quizzes ?? null,
+    tutoring: s.tutoring ?? null,
+    cases: s.cases ?? null,
+    cards: s.cards ?? null,
+    breadth: s.breadth ?? 0,
+    lastStudied: last ? new Date(last) : null,
+  };
+}
+
 /** Every topic the student has touched, plus any seeded topic with no record. */
 export async function masteryOverview(userId: string): Promise<MasterySnapshot[]> {
   const [allTopics, records] = await Promise.all([
@@ -174,14 +192,7 @@ export async function masteryOverview(userId: string): Promise<MasterySnapshot[]
         status: record.status as MasteryStatus,
         score: record.score,
         attempts: events,
-        signals: (record.signals as unknown as MasterySnapshot["signals"]) ?? {
-          quizzes: null,
-          tutoring: null,
-          cases: null,
-          cards: null,
-          breadth: 0,
-          lastStudied: null,
-        },
+        signals: normalizeSignals(record.signals),
       };
     })
   );

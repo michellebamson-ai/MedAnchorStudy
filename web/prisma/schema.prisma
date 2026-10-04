@@ -36,6 +36,7 @@ model User {
   planItems     PlanItem[]
   assignments   Assignment[]
   sources       Source[]
+  paths         LearningPath[]
 }
 
 model Session {
@@ -145,6 +146,7 @@ model Topic {
   bioModules   BioModule[]
   mastery      TopicMastery[]
   planItems    PlanItem[]
+  paths        LearningPath[]
 
   @@index([courseId])
 }
@@ -511,6 +513,31 @@ model PlanItem {
 }
 
 // ---------- Mastery & the closed loop (PRD §3.8, §6) ----------
+
+// A recommended learning path (PROGRESS_SPEC.md §4, §8): an ordered sequence of
+// activities derived from a topic's signals. Persisted so "Start this path"
+// launches step one and the remaining steps survive navigation.
+model LearningPath {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicSlug String?
+  topic     Topic?   @relation(fields: [topicSlug], references: [slug], onDelete: SetNull)
+  title     String
+  // Why this path was recommended, from the signals that produced it.
+  reason    String?
+  // [{ key, label, detail, target, kind, estMinutes }]
+  steps     Json
+  // Index of the step the student is on; equal to steps.length when finished.
+  currentStep Int    @default(0)
+  status    String   @default("active") // active | done | dismissed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  completedAt DateTime?
+
+  @@index([userId, status])
+  @@index([userId, topicSlug])
+}
 
 // Multi-signal, not a single score (PRD §3.8).
 model TopicMastery {
