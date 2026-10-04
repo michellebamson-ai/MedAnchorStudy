@@ -13,6 +13,9 @@ import { isBypassOn } from "@/lib/bypass";
  *
  * The demo identity is a real User row (fixed email), so per-user data —
  * uploads, reviews, mastery, plans — behaves exactly like the real flow.
+ *
+ * `isBypassOn()` ignores this in production unless ALLOW_DEMO_IN_PRODUCTION=1,
+ * so a stray .env cannot turn a deployed app into one shared identity.
  */
 export const DEMO_EMAIL = "demo@medanchor.local";
 

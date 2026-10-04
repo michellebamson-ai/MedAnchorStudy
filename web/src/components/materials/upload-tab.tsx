@@ -150,6 +150,21 @@ export function UploadTab({
           />
         </div>
 
+        {/*
+          Data-sensitivity notice. MedAnchor Study is an education tool with no
+          BAA, no audit log and no encryption-at-rest guarantee, so it must not
+          be used for real patient records. Stated plainly rather than as
+          legalese, and without pretending we can detect PHI automatically —
+          we cannot, so the responsibility stays with the person uploading.
+        */}
+        <div className="data-notice" role="note">
+          <b>Educational use only — do not upload real patient records.</b> Lecture notes, slides,
+          textbooks and question banks are what this is for. This app is not
+          HIPAA-covered and has no clinical audit trail, so identifiers, case
+          sheets and discharge documents do not belong here. Anonymise anything
+          you paste.
+        </div>
+
         <div
           className="dropzone"
           data-over={over}
@@ -175,7 +190,13 @@ export function UploadTab({
           }}
         >
           <div className="dropzone-title">Drop files here or tap to choose</div>
-          <div className="dropzone-sub">PDF, slides, textbook pages, audio, images, and notes.</div>
+          <div className="dropzone-sub">
+            Readable today: plain text, Markdown, CSV and pasted notes.
+          </div>
+          <div className="hint" style={{ marginTop: "var(--sp-2)" }}>
+            PDFs, slides, images and audio are stored but cannot be read yet, so they will not produce
+            summaries or questions until text extraction lands.
+          </div>
           <input
             ref={fileRef}
             type="file"

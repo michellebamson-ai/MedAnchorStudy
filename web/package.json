@@ -22,8 +22,8 @@
     "smoke:progress": "tsx scripts/smoke-progress.ts",
     "seed:comm": "tsx scripts/seed-comm.ts",
     "seed:evidence": "tsx scripts/seed-evidence.ts",
-    "seed:plan-demo": "tsx scripts/seed-plan-demo.ts",
-    "seed:progress-demo": "tsx scripts/seed-progress-demo.ts",
+    "demo:reset": "tsx scripts/reset-demo.ts",
+    "check:bypass": "tsx scripts/check-bypass.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

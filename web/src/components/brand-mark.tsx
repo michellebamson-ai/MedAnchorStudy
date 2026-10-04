@@ -1,15 +1,15 @@
-"use client";
-
-import { useState } from "react";
-import Image from "next/image";
-
 /**
  * Brand mark (ONBOARDING_SPEC.md Pages 1–3).
  *
- * The real logo is an anchor-with-snake-and-staff image the student will
- * supply as `public/brand/anchor-logo.png` (transparent background). Until
- * that file exists, this renders a quiet placeholder — the moment the file
- * lands in the project, the real artwork appears with zero code changes.
+ * Renders inline SVG rather than requesting an image file. An earlier version
+ * pointed at `public/brand/anchor-logo.png` and fell back on error, which meant
+ * every page load fired a 404 for artwork that does not exist yet.
+ *
+ * To use the real anchor-and-snake artwork, drop it at
+ * `public/brand/anchor-logo.png` and swap the `<svg>` below for:
+ *
+ *   <Image src="/brand/anchor-logo.png" alt="" width={size} height={size}
+ *          priority style={{ width: "100%", height: "100%", objectFit: "contain" }} />
  */
 export function BrandMark({
   size = 120,
@@ -20,32 +20,6 @@ export function BrandMark({
   glow?: boolean;
   label?: string;
 }) {
-  const [missing, setMissing] = useState(false);
-
-  if (!missing) {
-    return (
-      <span
-        className="brandmark"
-        data-glow={glow}
-        style={{ width: size, height: size }}
-        role="img"
-        aria-label={label}
-      >
-        <Image
-          src="/brand/anchor-logo.png"
-          alt=""
-          width={size}
-          height={size}
-          priority
-          onError={() => setMissing(true)}
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
-        />
-      </span>
-    );
-  }
-
-  // Stand-in: a simple anchor-and-staff glyph in brand tones. Replaced
-  // automatically the moment /brand/anchor-logo.png exists.
   return (
     <span
       className="brandmark brandmark-fallback"

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
-import { isBypassOn } from "@/lib/bypass";
+import { isBypassOn, isBypassSuppressed } from "@/lib/bypass";
+import { DemoBanner } from "@/components/demo-banner";
 import "./tokens.css";
 import "./components.css";
 
@@ -50,20 +51,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body>
-        {isBypassOn() ? (
-          <div
-            style={{
-              background: "#a8740c",
-              color: "#fff",
-              textAlign: "center",
-              fontSize: "0.75rem",
-              padding: "4px 8px",
-              fontWeight: 600,
-            }}
-          >
-            Demo mode — sign-in is bypassed (BYPASS_AUTH=1 in web/.env). Delete that line to
-            re-enable auth.
-          </div>
+        {isBypassOn() || isBypassSuppressed() ? (
+          <DemoBanner suppressed={isBypassSuppressed()} />
         ) : null}
         {children}
       </body>
