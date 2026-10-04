@@ -206,10 +206,13 @@ export class SimulatedProvider implements AIProvider {
   }
 }
 
-/** Chosen at runtime; defaults to simulated until a provider/key exists. */
-export function getProvider(): AIProvider {
-  return new SimulatedProvider();
-}
+/**
+ * The deterministic provider. Kept as the safety net for `ClaudeProvider` and as
+ * the offline mode for tests and demos.
+ *
+ * `getProvider` lives in `@/lib/ai/provider` — import it from there, not here,
+ * so the two modules do not form a cycle.
+ */
 
 const EMPATHY_WORDS = [
   "sorry", "understand", "difficult", "hard", "worried", "worry", "scared",

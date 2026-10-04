@@ -9,7 +9,7 @@ import { prisma } from "../src/lib/prisma";
 import { recordActivity, masteryOverview, recommendNext } from "../src/lib/mastery";
 import { reviewCard, dueCards, scheduleDueReviews } from "../src/lib/spaced-repetition";
 import { getStudentContext, adaptationBlock } from "../src/lib/personalization";
-import { getProvider } from "../src/lib/ai/simulated";
+import { getProvider } from "../src/lib/ai/provider";
 
 const email = `test-${Date.now()}@medanchor.local`;
 const password = "medanchor-test-123";

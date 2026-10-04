@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { getProvider } from "@/lib/ai/simulated";
+import { getProvider } from "@/lib/ai/provider";
 import type { Level, TeachTurn } from "@/lib/ai/types";
 import { recordActivity } from "@/lib/mastery";
 

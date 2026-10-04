@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { getProvider } from "@/lib/ai/simulated";
+import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
 import { formatCitation, type CitationStyle } from "@/lib/citations";
 
@@ -287,7 +287,15 @@ export async function evidenceSummary(
     detail: { sources: sources.map((s) => s.id), focus: focus.slice(0, 120) },
   }).catch(() => null);
 
-  return { ok: true, message: "Summary ready — check claims against the full texts before citing.", summary, citations };
+  // Say which engine wrote this. If Claude was unavailable the summary silently
+  // becomes a deterministic template, and the student should know that (PRD §4.3).
+  const engine = provider.isLive ? "Claude" : "the offline template";
+  return {
+    ok: true,
+    message: `Summary drafted by ${engine} — check every claim against the full texts before citing.`,
+    summary,
+    citations,
+  };
 }
 
 /** Develop a research question: topic in, evidence-based questions out. */

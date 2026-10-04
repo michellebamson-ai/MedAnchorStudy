@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { getProvider } from "@/lib/ai/simulated";
+import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
 
 /** revalidatePath throws outside a request (scripts, tests) — never break on it. */

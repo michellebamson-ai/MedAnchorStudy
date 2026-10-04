@@ -7,7 +7,7 @@ import { prisma } from "../src/lib/prisma";
 import { auth } from "../src/lib/auth";
 import { storePastedText } from "../src/lib/documents";
 import { analyzeText } from "../src/lib/analyze";
-import { getProvider } from "../src/lib/ai/simulated";
+import { getProvider } from "../src/lib/ai/provider";
 
 const email = `materials-${Date.now()}@medanchor.local`;
 

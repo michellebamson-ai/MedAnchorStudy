@@ -1,6 +1,6 @@
 /** Practice loop smoke test: case start->answer->end; roleplay->feedback. */
 import { prisma } from "../src/lib/prisma";
-import { getProvider } from "../src/lib/ai/simulated";
+import { getProvider } from "../src/lib/ai/provider";
 import { startCase, answerStep, endCase } from "../src/app/practice/case-actions";
 import { startComm, replyComm, endComm } from "../src/app/practice/comm-actions";
 

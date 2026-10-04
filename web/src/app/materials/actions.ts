@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { analyzeText, type AnalysisFinding } from "@/lib/analyze";
-import { getProvider } from "@/lib/ai/simulated";
+import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
 import { reviewCard as scheduleReview } from "@/lib/spaced-repetition";
 import { removeDocumentFile, storePastedText, storeUploadedFiles } from "@/lib/documents";
