@@ -1,14 +1,9 @@
-import { Placeholder } from "@/components/placeholder";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Flashcards" };
-
-export default function PlaceholderPage() {
-  return (
-    <Placeholder
-      title="Flashcards"
-      lede="Adaptive active recall lives in Materials now — decks per material, reviews on schedule."
-      points={[]}
-      links={[{ href: "/materials?tab=flashcards", label: "Open flashcards" }]}
-    />
-  );
+/**
+ * Moved into its hub. Kept as a permanent redirect so old links keep working:
+ * flashcards lives in /materials?tab=flashcards.
+ */
+export default function LegacyFlashcards() {
+  redirect("/materials?tab=flashcards");
 }

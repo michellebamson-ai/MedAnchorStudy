@@ -70,31 +70,45 @@ All interactions update localStorage-backed state (mastery, history, streak, pla
 
 ## How to run
 
-No build step, no dependencies. Serve the folder over HTTP (localStorage and `file://` both work, but a simple static server is cleanest):
+Requires **Node 20+** and **Docker Desktop** (for PostgreSQL).
 
 ```bash
-# any one of these from the project folder:
-python -m http.server 8000
-npx serve .
+cd web
+cp .env.example .env          # then fill it in — see .env.example
+cd .. && docker compose up -d && cd web   # Postgres 16 on :5432
+npm install
+npx prisma generate
+npx prisma db push
+npm run db:seed               # topics, cases, flashcards, biostat modules, evidence
+npm run dev                   # http://localhost:3000
 ```
 
-Then open <http://localhost:8000> in any modern browser (Chrome, Edge, Firefox, Safari).
+### Scripts
 
-Alternatively, double-click `index.html` — the app also runs directly from the filesystem.
+| Command | What it does |
+|---|---|
+| `npm run dev` / `build` / `start` | Next.js |
+| `npm run typecheck` / `lint` | TypeScript and ESLint |
+| `npm run demo:reset` | Wipe and rebuild the demo student's data |
+| `npm run preflight` | **Run before deploying.** Fails on anything that breaks in production |
+| `npm run check:ai` | Provider selection, routing and fallback behaviour (no network) |
+| `npm run check:bypass` | Proves the auth bypass cannot ship to production |
+| `npm run smoke` | Core learning loop |
+| `npm run smoke:settings` | Preferences, data export, delete guard |
 
-> The prototype ships with realistic **demo data** pre-loaded so the dashboard and plan look alive on first launch. Use **Reset demo data** (sidebar) or **Clear all data** (Progress page) to wipe or reload it.
+## Technologies
 
-## Technologies used
+- **Next.js 16** (App Router) · **TypeScript** · **React 19**
+- **PostgreSQL 16** + **Prisma 6** — 20+ models covering users, mastery, the
+  activity event log, study plans and learning paths
+- **Better Auth** — email/password, database sessions
+- **Tailwind-free CSS** — a token-driven design system with light and dark themes
+- **AI providers behind one interface** — Claude, Gemini and Groq, plus a
+  deterministic offline engine used whenever no key is configured or a provider
+  fails. Chat and content are routed separately: latency-bound work goes to the
+  fastest model, accuracy-bound work to the strongest.
 
-- **HTML5 + CSS3** — responsive app shell, cards, chat, flashcards, charts
-- **Vanilla JavaScript (ES2020)** — hash-based single-page router, state management, and simulated AI engines (tutor, case grader, quiz, flashcard scheduler, biostat coach)
-- **localStorage** — persistent progress, adaptive plan, and learning history
-- No external runtime libraries — runs anywhere browsers run
+### Deployment
 
-## What the initial prototype demonstrates
-
-A complete, working slice of the MedAnchor Study loop in pure front-end code. The simulated AI engines demonstrate the *experience*: Socratic questioning with adaptive responses, explanation evaluation, clinical case reasoning, adaptive flashcard prioritisation, personalised exam sessions, and a plan that rebalances from your actual performance. The production product would connect these same interaction patterns to real language models and document parsing.
-
----
-
-© MedAnchor Study. Built as an initial prototype for healthcare-education innovation.
+See **[DEPLOYMENT.md](DEPLOYMENT.md)**. Nothing has been deployed; that document
+is for you to follow.

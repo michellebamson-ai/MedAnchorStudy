@@ -1,14 +1,9 @@
-import { Placeholder } from "@/components/placeholder";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Biostatistics" };
-
-export default function PlaceholderPage() {
-  return (
-    <Placeholder
-      title="Biostatistics"
-      lede="Reasoning-first statistics coaching — why this test, worked step by step."
-      points={["Sensitivity to regression and beyond", "Formula walkthroughs", "Output and table interpretation"]}
-      links={[{ href: "/research", label: "Research hub" }]}
-    />
-  );
+/**
+ * Moved into its hub. Kept as a permanent redirect so old links keep working:
+ * biostats lives in /research?tab=biostat.
+ */
+export default function LegacyBiostats() {
+  redirect("/research?tab=biostat");
 }

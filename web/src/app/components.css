@@ -2287,3 +2287,20 @@ th { color: var(--text-3); font-weight: 600; font-size: var(--fs-xs); text-trans
   background: var(--danger-soft);
 }
 .settings-danger .card-sub { color: var(--text-2); margin-bottom: var(--sp-4); }
+
+/* ---------- Legal pages (privacy, terms) ---------- */
+.legal { max-width: 68ch; }
+.legal h2 { font-family: var(--font-serif); font-size: var(--fs-lg); font-weight: 500; margin: var(--sp-8) 0 var(--sp-3); }
+.legal h2:first-of-type { margin-top: var(--sp-6); }
+.legal p { font-size: var(--fs-sm); line-height: var(--lh-loose); color: var(--text-2); margin-bottom: var(--sp-3); }
+.legal ul { margin: 0 0 var(--sp-4); padding-left: var(--sp-6); }
+.legal li { font-size: var(--fs-sm); line-height: var(--lh-loose); color: var(--text-2); margin-bottom: var(--sp-2); }
+.legal b { color: var(--text); }
+.legal a { color: var(--brand-700); }
+.legal .alert { margin-bottom: var(--sp-5); }
+.fineprint-note {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  border-left: 2px solid var(--edge-hairline);
+  padding-left: var(--sp-4);
+}

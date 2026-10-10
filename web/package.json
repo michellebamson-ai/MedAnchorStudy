@@ -23,6 +23,7 @@
     "seed:comm": "tsx scripts/seed-comm.ts",
     "seed:evidence": "tsx scripts/seed-evidence.ts",
     "demo:reset": "tsx scripts/reset-demo.ts",
+    "preflight": "tsx scripts/preflight.ts",
     "check:bypass": "tsx scripts/check-bypass.ts",
     "check:ai": "tsx scripts/check-ai.ts",
     "smoke:settings": "tsx scripts/smoke-settings.ts",

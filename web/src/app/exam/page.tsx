@@ -1,14 +1,9 @@
-import { Placeholder } from "@/components/placeholder";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Exam Preparation" };
-
-export default function PlaceholderPage() {
-  return (
-    <Placeholder
-      title="Exam Preparation"
-      lede="Model papers, blueprints and annotated feedback against your exam goals."
-      points={["Practice sets with full explanations", "Coverage against your blueprint", "Wrong answers become flashcards"]}
-      links={[{ href: "/materials?tab=questions", label: "Practice now" }]}
-    />
-  );
+/**
+ * Moved into its hub. Kept as a permanent redirect so old links keep working:
+ * exam lives in /practice?tab=questions.
+ */
+export default function LegacyExam() {
+  redirect("/practice?tab=questions");
 }

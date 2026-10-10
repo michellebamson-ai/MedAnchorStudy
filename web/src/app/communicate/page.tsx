@@ -1,14 +1,9 @@
-import { Placeholder } from "@/components/placeholder";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Communication Practice" };
-
-export default function PlaceholderPage() {
-  return (
-    <Placeholder
-      title="Communication Practice"
-      lede="Role-play histories, health education and difficult conversations with feedback."
-      points={["Patient, caregiver and community roles", "Clarity, questioning and empathy scored", "SOAP-note practice"]}
-      links={[{ href: "/teach", label: "Prepare with the tutor" }]}
-    />
-  );
+/**
+ * Moved into its hub. Kept as a permanent redirect so old links keep working:
+ * communicate lives in /practice?tab=communicate.
+ */
+export default function LegacyCommunicate() {
+  redirect("/practice?tab=communicate");
 }
