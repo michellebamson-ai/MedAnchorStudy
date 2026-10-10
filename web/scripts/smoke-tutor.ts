@@ -1,4 +1,6 @@
 /** Teach Me loop smoke test: start -> answer x2 -> assist -> end. */
+import "./_demo-identity";
+
 import { prisma } from "../src/lib/prisma";
 import { auth } from "../src/lib/auth";
 import { startTeach, answerTeach, assistTeach, endTeach } from "../src/app/teach/actions";

@@ -1,4 +1,6 @@
 /** Practice loop smoke test: case start->answer->end; roleplay->feedback. */
+import "./_demo-identity";
+
 import { prisma } from "../src/lib/prisma";
 import { getProvider } from "../src/lib/ai/provider";
 import { startCase, answerStep, endCase } from "../src/app/practice/case-actions";

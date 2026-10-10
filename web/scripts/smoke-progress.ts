@@ -1,4 +1,6 @@
 /** Progress smoke test: signals -> statuses -> paths -> advancing -> feed -> course scoping. */
+import "./_demo-identity";
+
 import { prisma } from "../src/lib/prisma";
 import { buildPath, explain, nextAction } from "../src/lib/paths";
 import {

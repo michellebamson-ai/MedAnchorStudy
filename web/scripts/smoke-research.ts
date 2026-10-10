@@ -1,4 +1,6 @@
 /** Research loop smoke test: evidence search->save->summary->cite; biostat concept->check->picker->data->paper->RQ. */
+import "./_demo-identity";
+
 import { prisma } from "../src/lib/prisma";
 import { formatCitation } from "../src/lib/citations";
 import {

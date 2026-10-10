@@ -1,4 +1,6 @@
 /** Study Plan smoke test: setup -> generate -> complete -> miss -> catch-up -> availability -> deadlines. */
+import "./_demo-identity";
+
 import { prisma } from "../src/lib/prisma";
 import {
   loadPlanSnapshot,

@@ -6,6 +6,8 @@
  * mastery and one in-flight learning path. This is also what the in-app "Reset
  * to sample data" button calls.
  */
+import "./_demo-identity";
+
 import { prisma } from "../src/lib/prisma";
 import { resetDemo } from "../src/lib/demo-seed";
 import { startOfDay } from "../src/lib/planner";

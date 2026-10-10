@@ -1,4 +1,6 @@
 /** Settings smoke: preferences persist, export contains real rows, delete refuses a wrong email. */
+import "./_demo-identity";
+
 import { prisma } from "../src/lib/prisma";
 import { resetDemo } from "../src/lib/demo-seed";
 import { savePreferences, exportMyData, dataSummary, deleteMyAccount, saveIdentity } from "../src/app/settings/actions";
