@@ -93,6 +93,17 @@ export const auth = betterAuth({
       // the incoming email is verified, so keeping this list short is what
       // stops another provider attaching itself to an unverified account.
       trustedProviders: ["google"],
+
+      // Defaults to true, and that is what still blocked linking even with
+      // Google trusted: the gate is
+      //   (not trusted && provider email unverified)
+      //   || (requireLocalEmailVerified && LOCAL email unverified)
+      //   || disabled || disableImplicitLinking
+      // Every account created before email verification was switched on has
+      // emailVerified = false locally, so the second clause fired on its own.
+      // Google having just asserted verified ownership of the address is the
+      // stronger signal here; the stale local flag should not veto it.
+      requireLocalEmailVerified: false,
     },
   },
   verification: {
