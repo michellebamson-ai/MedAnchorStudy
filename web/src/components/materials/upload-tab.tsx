@@ -10,6 +10,7 @@ type Doc = {
   subject: string | null;
   status: string;
   error: string | null;
+  extractionNote: string | null;
   createdAt: Date | string;
 };
 
@@ -34,8 +35,9 @@ const STATUS_LABEL: Record<string, { text: string; tone: "ok" | "warn" | "bad" |
 function statusFor(d: Doc): { text: string; tone: "ok" | "warn" | "bad" | "" } {
   if (d.status === "analyzed") return STATUS_LABEL.analyzed;
   if (d.status === "analyzing" || d.status === "extracting") return STATUS_LABEL.analyzing;
-  if (d.error === "unreadable") return { text: "Needs attention", tone: "warn" };
+  if (d.error === "unreadable") return { text: "Not readable", tone: "warn" };
   if (d.error) return { text: "Needs attention", tone: "bad" };
+  if (d.extractionNote) return { text: "Read, partly used", tone: "warn" };
   return STATUS_LABEL.uploaded;
 }
 
@@ -191,11 +193,12 @@ export function UploadTab({
         >
           <div className="dropzone-title">Drop files here or tap to choose</div>
           <div className="dropzone-sub">
-            Readable today: plain text, Markdown, CSV and pasted notes.
+            PDF · PowerPoint · Word · text · Markdown · CSV
           </div>
           <div className="hint" style={{ marginTop: "var(--sp-2)" }}>
-            PDFs, slides, images and audio are stored but cannot be read yet, so they will not produce
-            summaries or questions until text extraction lands.
+            Text is read straight out of your file, including speaker notes from slide decks. Scanned PDFs
+            (images of pages) still need OCR, and images and audio are not read at all — we will tell you
+            on the file itself rather than failing silently.
           </div>
           <input
             ref={fileRef}
@@ -320,12 +323,20 @@ export function UploadTab({
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
+                    {d.extractionNote ? (
+                      <span className="list-sub" style={{ display: "block" }} data-tone="warn">
+                        {d.extractionNote}
+                      </span>
+                    ) : null}
                   </span>
                   <span className="doc-status" data-tone={st.tone}>
                     {st.text}
                   </span>
-                  <a className="btn btn-sm" href={`/materials?tab=analyze&doc=${d.id}`}>
-                    {d.status === "analyzed" ? "Open" : "Analyze"}
+                  <a
+                    className="btn btn-sm"
+                    href={d.error === "unreadable" ? `/api/materials/file/${d.id}` : `/materials?tab=analyze&doc=${d.id}`}
+                  >
+                    {d.error === "unreadable" ? "Download" : d.status === "analyzed" ? "Open" : "Analyze"}
                   </a>
                 </div>
               );

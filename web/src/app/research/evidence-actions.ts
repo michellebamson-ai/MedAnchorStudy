@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
 import { formatCitation, type CitationStyle } from "@/lib/citations";
+import { searchLiterature } from "@/lib/literature";
 
 /** revalidatePath throws outside a request (scripts, tests) — never break on it. */
 function refresh(path: string): void {
@@ -24,10 +25,14 @@ async function requireUserId(): Promise<string> {
 
 export type SourceFilter = "pubmed" | "scholar" | "guidelines" | "news" | "textbooks" | "all";
 
-/** Which stored types answer each filter. Honest mapping, shown in the UI. */
+/**
+ * Which stored types answer each filter, and which live providers run.
+ *
+ * "scholar" is deliberately not labelled "Google Scholar": there is no public
+ * Scholar API, so querying it is not possible. The scholarly literature is
+ * searched through OpenAlex and Crossref, which index the same papers.
+ */
 const FILTER_TYPES: Record<SourceFilter, string[] | null> = {
-  // Until live PubMed/Scholar APIs land (Phase 6), these search the curated
-  // peer-reviewed shelf of the local library and say so.
   pubmed: ["peer_reviewed", "systematic_review"],
   scholar: ["peer_reviewed", "systematic_review", "textbook"],
   guidelines: ["clinical_guideline", "public_health_guideline", "government", "organization"],
@@ -47,16 +52,45 @@ export interface EvidenceHit {
   snippet: string;
   saved: boolean;
   mine: boolean;
+  /** True when this hit came from PubMed/Crossref/OpenAlex rather than the shelf. */
+  live?: boolean;
+  provider?: string;
+  doi?: string | null;
+  citationCount?: number | null;
 }
 
-/** Search the curated library plus the student's own saved sources. */
+/** A live hit is not a database row, so it is passed whole and saved on click. */
+export interface LiteratureSaveInput {
+  title: string;
+  authors: string | null;
+  year: number | null;
+  venue: string | null;
+  url: string | null;
+  doi: string | null;
+  abstract: string | null;
+  sourceType: string;
+  provider: string;
+}
+
+/**
+ * Search live bibliographic APIs, plus the curated library and the student's
+ * own saved sources.
+ *
+ * Live results come first — a student asking about this year's evidence wants
+ * this year's papers. The curated shelf still appears underneath, because those
+ * entries carry the quality notes the APIs cannot supply.
+ *
+ * The note always states which providers actually answered. If PubMed timed
+ * out, the student is told rather than shown a quietly smaller result set.
+ */
 export async function searchEvidence(query: string, filter: SourceFilter = "all"): Promise<{
   hits: EvidenceHit[];
   note: string;
+  liveAvailable: boolean;
 }> {
   const user = await getCurrentUser().catch(() => null);
   const q = query.trim();
-  if (!q) return { hits: [], note: "" };
+  if (!q) return { hits: [], note: "", liveAvailable: false };
 
   const types = FILTER_TYPES[filter];
   // Match any significant word — students type phrases, not titles.
@@ -65,34 +99,67 @@ export async function searchEvidence(query: string, filter: SourceFilter = "all"
     .split(/[^a-z]+/)
     .filter((w) => w.length > 2 && !["the", "and", "for", "with", "from"].includes(w))
     .slice(0, 6);
-  if (!words.length) return { hits: [], note: "" };
+  if (!words.length) return { hits: [], note: "", liveAvailable: false };
   const wordOr = words.flatMap((w) => [
     { title: { contains: w, mode: "insensitive" as const } },
     { abstract: { contains: w, mode: "insensitive" as const } },
     { publisher: { contains: w, mode: "insensitive" as const } },
   ]);
-  const library = await prisma.source.findMany({
-    where: {
-      userId: null,
-      ...(types ? { sourceType: { in: types } } : {}),
-      OR: wordOr,
-    },
-    orderBy: { year: "desc" },
-    take: 20,
-  });
 
-  const mine = user
-    ? await prisma.source.findMany({
-        where: { userId: user.id, OR: wordOr },
-        take: 10,
-      })
-    : [];
+  // Textbooks are not indexed by the live APIs in a useful way.
+  const wantLive = filter !== "textbooks";
+
+  const [library, mine, live] = await Promise.all([
+    prisma.source.findMany({
+      where: {
+        userId: null,
+        ...(types ? { sourceType: { in: types } } : {}),
+        OR: wordOr,
+      },
+      orderBy: { year: "desc" },
+      take: 20,
+    }),
+    user
+      ? prisma.source.findMany({
+          where: { userId: user.id, OR: wordOr },
+          take: 10,
+        })
+      : Promise.resolve([]),
+    wantLive ? searchLiterature(q, 12) : Promise.resolve(null),
+  ]);
 
   const savedIds = new Set(mine.map((m) => m.identifier).filter(Boolean));
+
+  const liveHits: EvidenceHit[] = (live?.hits ?? []).map((h) => ({
+    id: `live:${h.provider}:${h.identifier}`,
+    title: h.title,
+    authors: h.authors,
+    year: h.year,
+    publisher: h.venue,
+    sourceType: h.sourceType,
+    snippet: h.abstract ?? "",
+    saved: false,
+    mine: false,
+    live: true,
+    provider: h.provider,
+    url: h.url,
+    doi: h.doi,
+    citationCount: h.citationCount,
+  }));
+
+  // Don't show a live hit the student has already saved under a different id.
+  const liveKeys = new Set(
+    (live?.hits ?? [])
+      .map((h) => (h.doi ?? h.title).toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 60))
+      .filter(Boolean)
+  );
+
   const hits: EvidenceHit[] = [
     ...mine.map((m) => toHit(m, true, true)),
+    ...liveHits,
     ...library
       .filter((l) => !savedIds.has(l.identifier))
+      .filter((l) => !liveKeys.has((l.url ?? "").replace(/^https?:\/\/doi\.org\//, "").toLowerCase()))
       .map((l) => toHit(l, savedIds.has(l.identifier), false)),
   ];
 
@@ -105,11 +172,21 @@ export async function searchEvidence(query: string, filter: SourceFilter = "all"
     }).catch(() => null);
   }
 
-  const live =
-    filter === "pubmed" || filter === "scholar"
-      ? "PubMed and Scholar search the curated peer-reviewed shelf for now — live lookup arrives with connectors."
-      : "Searching the curated library. Live databases arrive with connectors — everything here is labelled by source type.";
-  return { hits, note: hits.length ? live : "" };
+  return { hits, note: buildNote(live), liveAvailable: !!live?.hits.length };
+}
+
+function buildNote(live: Awaited<ReturnType<typeof searchLiterature>> | null): string {
+  if (!live) {
+    return "Searching the curated library — it is a small shelf of well-annotated sources, not a full database.";
+  }
+  if (!live.ok.length) {
+    return "Live databases could not be reached just now, so these are from the curated library. Try again in a moment.";
+  }
+  const names = live.ok.map((p) => (p === "pubmed" ? "PubMed" : p === "crossref" ? "Crossref" : "OpenAlex"));
+  const base = `Live results from ${names.join(" and ")}, plus the curated shelf.`;
+  if (!live.failed.length) return base;
+  const down = live.failed.map((f) => `${f.provider} (${f.reason})`).join(", ");
+  return `${base} Not reachable this time: ${down}.`;
 }
 
 function toHit(
@@ -176,6 +253,61 @@ export async function saveSource(sourceId: string): Promise<{ ok: boolean; messa
     activity: "evidence_save",
     detail: { sourceId },
   }).catch(() => null);
+  refresh("/research");
+  return { ok: true, message: "Added to your sources." };
+}
+
+/**
+ * Save a live hit from PubMed/Crossref/OpenAlex into My Sources.
+ *
+ * These arrive as search results, not database rows, so the metadata travels
+ * with the request. The provider and "metadata only, not full text" scope note
+ * are persisted, because a student citing this later needs to know where the
+ * record came from and that the app never read the paper.
+ */
+export async function saveLiteratureHit(input: LiteratureSaveInput): Promise<{ ok: boolean; message: string }> {
+  let userId: string;
+  try {
+    userId = await requireUserId();
+  } catch {
+    return { ok: false, message: "Sign in to save sources." };
+  }
+
+  const title = String(input.title ?? "").trim().slice(0, 500);
+  if (!title) return { ok: false, message: "That result has no title, so it cannot be saved." };
+
+  const provider = String(input.provider ?? "live").slice(0, 20);
+  const identifier = `live:${provider}:${(input.doi ?? title).toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 80)}#${userId.slice(0, 8)}`;
+
+  const existing = await prisma.source.findFirst({ where: { userId, identifier } });
+  if (existing) return { ok: true, message: "Already in your sources." };
+
+  await prisma.source.create({
+    data: {
+      userId,
+      title,
+      authors: input.authors?.slice(0, 500) ?? null,
+      year: typeof input.year === "number" ? input.year : null,
+      publisher: input.venue?.slice(0, 300) ?? null,
+      url: input.url?.slice(0, 500) ?? null,
+      identifier,
+      sourceType: String(input.sourceType ?? "peer_reviewed").slice(0, 40),
+      abstract: input.abstract?.slice(0, 4000) ?? null,
+      scopeNote: `Saved from ${provider} search on ${new Date().toLocaleDateString("en-GB")}. Bibliographic metadata and abstract only — the full text was not retrieved or read.`,
+      quality: {
+        provider,
+        doi: input.doi ?? null,
+      } as never,
+    },
+  });
+
+  await recordActivity({
+    userId,
+    kind: "evidence",
+    activity: "evidence_save",
+    detail: { provider, title: title.slice(0, 80) },
+  }).catch(() => null);
+
   refresh("/research");
   return { ok: true, message: "Added to your sources." };
 }

@@ -68,22 +68,6 @@ export function splitSentences(text: string): string[] {
     .filter((s) => s.length > 24 && s.length < 600);
 }
 
-/** Plain-text extraction. Returns null for binary formats we cannot read. */
-export function extractText(buffer: Buffer, mimeType: string, ext: string): string | null {
-  const textKinds = ["text/", "application/json", "application/xml"];
-  const textExts = ["txt", "md", "markdown", "csv", "text", "log"];
-  if (textKinds.some((t) => mimeType.startsWith(t)) || textExts.includes(ext)) {
-    // Strip a UTF-8 BOM if present.
-    const raw = buffer.toString("utf8").replace(/^﻿/, "");
-    // Reject binary masquerading as text.
-    const nul = raw.indexOf("");
-    const sample = nul === -1 ? raw : raw.slice(0, nul);
-    if (sample.length < 20) return null;
-    return raw.replace(/\0/g, "").trim() || null;
-  }
-  return null;
-}
-
 export function analyzeText(text: string): AnalysisResult {
   const sentences = splitSentences(text);
 

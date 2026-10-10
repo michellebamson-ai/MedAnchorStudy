@@ -6,7 +6,7 @@ import { MySources, CompareView, RQTool } from "@/components/research/evidence-s
 
 export const FILTERS = [
   ["pubmed", "PubMed"],
-  ["scholar", "Google Scholar"],
+  ["scholar", "Scholarly"],
   ["guidelines", "Guidelines"],
   ["news", "News"],
   ["textbooks", "Textbooks"],

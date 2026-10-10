@@ -669,6 +669,10 @@
 .tag-review { color: var(--warn); background: var(--warn-soft); }
 .tag-exam { color: var(--brand-700); background: var(--info-soft); }
 
+/* Marks a record fetched live from an external index rather than the local shelf. */
+.tag-live { color: var(--success-700, var(--brand-700)); background: var(--success-soft, var(--info-soft)); font-weight: 600; }
+
+
 .dropzone {
   border: 2px dashed var(--edge-control);
   border-radius: var(--r-lg);

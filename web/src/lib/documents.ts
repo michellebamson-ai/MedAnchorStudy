@@ -2,7 +2,7 @@ import { deleteObject, putObject } from "@/lib/storage";
 import { extname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { extractText } from "@/lib/analyze";
+import { extractDocumentText } from "@/lib/document-text";
 
 export const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
@@ -59,7 +59,12 @@ export async function storeUploadedFiles(
     const stored = `${randomUUID()}-${safeName(file.name)}`;
     const { storedPath } = await putObject(userId, stored, file.buffer);
 
-    const extracted = extractText(file.buffer, file.type || "application/octet-stream", ext);
+    // Store first, then read. A parser failure must never lose the file.
+    const extracted = await extractDocumentText({
+      buffer: file.buffer,
+      mimeType: file.type || "application/octet-stream",
+      ext,
+    });
 
     const doc = await prisma.document.create({
       data: {
@@ -67,13 +72,16 @@ export async function storeUploadedFiles(
         title: file.name.replace(/\.[^.]+$/, "") || file.name,
         originalName: file.name,
         kind,
-        mimeType: file.type || null,
+        mimeType: file.type || "application/octet-stream",
         bytes: file.size,
         storedPath,
         subject,
-        extractedText: extracted,
+        extractedText: extracted.text,
         status: "uploaded",
-        error: extracted || kind === "text" ? null : "unreadable",
+        // Only a genuine read failure is an error. A truncated-but-readable file is fine.
+        error: extracted.text ? null : "unreadable",
+        // Why a read failed, or what was truncated — shown verbatim in the UI.
+        extractionNote: extracted.reason ?? null,
       },
     });
     ids.push(doc.id);

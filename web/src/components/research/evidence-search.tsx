@@ -3,11 +3,11 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { saveSource, searchEvidence, type EvidenceHit, type SourceFilter } from "@/app/research/evidence-actions";
+import { saveLiteratureHit, saveSource, searchEvidence, type EvidenceHit, type SourceFilter } from "@/app/research/evidence-actions";
 
 export const FILTERS = [
   ["pubmed", "PubMed"],
-  ["scholar", "Google Scholar"],
+  ["scholar", "Scholarly"],
   ["guidelines", "Guidelines"],
   ["news", "News"],
   ["textbooks", "Textbooks"],
@@ -20,6 +20,12 @@ const EXAMPLES = [
   "Hand hygiene evidence",
   "Public health communication",
 ];
+
+const PROVIDER_LABEL: Record<string, string> = {
+  pubmed: "PubMed",
+  crossref: "Crossref",
+  openalex: "OpenAlex",
+};
 
 const TYPE_BADGE: Record<string, string> = {
   peer_reviewed: "Peer-reviewed",
@@ -105,10 +111,24 @@ export function EvidenceSearch({
     setRecent(next);
   }
 
-  async function save(id: string) {
+  async function save(id: string, hit?: EvidenceHit) {
     setSaving(id);
     setMessage("");
-    const res = await saveSource(id);
+    // Live hits are search results, not rows, so their metadata travels with
+    // the request instead of being looked up by id.
+    const res = hit?.live
+      ? await saveLiteratureHit({
+          title: hit.title,
+          authors: hit.authors,
+          year: hit.year,
+          venue: hit.publisher,
+          url: hit.url,
+          doi: hit.doi ?? null,
+          abstract: hit.snippet || null,
+          sourceType: hit.sourceType,
+          provider: hit.provider ?? "live",
+        })
+      : await saveSource(id);
     setMessage(res.message);
     setSaving(null);
     if (res.ok) {
@@ -218,35 +238,89 @@ export function EvidenceSearch({
           </div>
         ) : (
           <div className="stack-sm" role="list" aria-label="Search results">
-            {hits.map((h) => (
-              <article key={h.id} className="surface-tight" role="listitem">
-                <Link className="list-title" href={`/research?tab=evidence&source=${h.id}`}>
-                  {h.title}
-                </Link>
-                <p className="list-sub" style={{ margin: "4px 0" }}>
-                  {[h.authors, h.year].filter(Boolean).join(" · ")}
-                  {h.publisher ? ` · ${h.publisher}` : ""}
-                </p>
-                <p className="row" style={{ gap: 6, margin: "4px 0" }}>
-                  <span className="tag">{TYPE_BADGE[h.sourceType] ?? "Other"}</span>
-                  {h.mine ? <span className="tag tag-exam">My source</span> : null}
-                </p>
-                <p className="card-sub" style={{ margin: "4px 0 var(--sp-3)" }}>
-                  {h.snippet}…
-                </p>
-                <div className="row">
-                  <Link className="btn btn-sm" href={`/research?tab=evidence&source=${h.id}`}>
-                    Read
+            {hits.map((h) =>
+              h.live ? (
+                // A live hit is metadata from an external index, not a row we
+                // hold — so "Read" means "open the publisher's page", and the
+                // abstract is what the API returned, not our own summary.
+                <article key={h.id} className="surface-tight" role="listitem">
+                  <a className="list-title" href={h.url ?? "#"} target="_blank" rel="noopener noreferrer">
+                    {h.title}
+                  </a>
+                  <p className="list-sub" style={{ margin: "4px 0" }}>
+                    {[h.authors, h.year].filter(Boolean).join(" · ")}
+                    {h.publisher ? ` · ${h.publisher}` : ""}
+                  </p>
+                  <p className="row" style={{ gap: 6, margin: "4px 0" }}>
+                    <span className="tag tag-live">{PROVIDER_LABEL[h.provider ?? ""] ?? "Live"}</span>
+                    <span className="tag">{TYPE_BADGE[h.sourceType] ?? "Research"}</span>
+                    {typeof h.citationCount === "number" ? (
+                      <span className="hint">{h.citationCount.toLocaleString()} citations</span>
+                    ) : null}
+                  </p>
+                  {h.snippet ? (
+                    <p className="card-sub" style={{ margin: "4px 0 var(--sp-3)" }}>
+                      {h.snippet.length > 320 ? `${h.snippet.slice(0, 320)}…` : h.snippet}
+                    </p>
+                  ) : (
+                    <p className="card-sub" style={{ margin: "4px 0 var(--sp-3)" }}>
+                      No abstract returned by this index.
+                    </p>
+                  )}
+                  <div className="row">
+                    {h.url ? (
+                      <a className="btn btn-sm" href={h.url} target="_blank" rel="noopener noreferrer">
+                        Open paper
+                      </a>
+                    ) : null}
+                    {userId && !h.saved ? (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        disabled={saving === h.id}
+                        onClick={() => save(h.id, h)}
+                        type="button"
+                      >
+                        {saving === h.id ? "Saving…" : "Add to my sources"}
+                      </button>
+                    ) : null}
+                    {h.saved ? <span className="hint">In your sources ✓</span> : null}
+                  </div>
+                </article>
+              ) : (
+                <article key={h.id} className="surface-tight" role="listitem">
+                  <Link className="list-title" href={`/research?tab=evidence&source=${h.id}`}>
+                    {h.title}
                   </Link>
-                  {userId && !h.saved && !h.mine ? (
-                    <button className="btn btn-ghost btn-sm" disabled={saving === h.id} onClick={() => save(h.id)} type="button">
-                      {saving === h.id ? "Saving…" : "Add to my sources"}
-                    </button>
-                  ) : null}
-                  {h.saved || h.mine ? <span className="hint">In your sources ✓</span> : null}
-                </div>
-              </article>
-            ))}
+                  <p className="list-sub" style={{ margin: "4px 0" }}>
+                    {[h.authors, h.year].filter(Boolean).join(" · ")}
+                    {h.publisher ? ` · ${h.publisher}` : ""}
+                  </p>
+                  <p className="row" style={{ gap: 6, margin: "4px 0" }}>
+                    <span className="tag">{TYPE_BADGE[h.sourceType] ?? "Other"}</span>
+                    {h.mine ? <span className="tag tag-exam">My source</span> : null}
+                  </p>
+                  <p className="card-sub" style={{ margin: "4px 0 var(--sp-3)" }}>
+                    {h.snippet}…
+                  </p>
+                  <div className="row">
+                    <Link className="btn btn-sm" href={`/research?tab=evidence&source=${h.id}`}>
+                      Read
+                    </Link>
+                    {userId && !h.saved && !h.mine ? (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        disabled={saving === h.id}
+                        onClick={() => save(h.id, h)}
+                        type="button"
+                      >
+                        {saving === h.id ? "Saving…" : "Add to my sources"}
+                      </button>
+                    ) : null}
+                    {h.saved || h.mine ? <span className="hint">In your sources ✓</span> : null}
+                  </div>
+                </article>
+              )
+            )}
           </div>
         )
       ) : null}

@@ -28,7 +28,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * second; password meter, show toggle, Google option, spec-exact messages,
  * and the quiet "Welcome, {name}" moment after sign-up.
  */
-export function LoginForm() {
+export function LoginForm({ google = false }: { google?: boolean }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("create");
   const [firstName, setFirstName] = useState("");
@@ -99,12 +99,20 @@ export function LoginForm() {
     }
   }
 
-  async function google() {
+  async function googleSignIn() {
     setFormError("");
+    setBusy(true);
     try {
       await signIn.social({ provider: "google", callbackURL: "/profile-setup" });
     } catch {
-      setFormError("Google sign-in isn't connected yet — email works right now.");
+      // Most likely cause: this address already has a password account. We do
+      // not link automatically, because silently merging would split an
+      // existing student's progress across two accounts.
+      setFormError(
+        "Google sign-in didn't complete. If you already have a password here, sign in with it instead."
+      );
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -291,12 +299,17 @@ export function LoginForm() {
         </button>
       </form>
 
-      <div className="divider-or" style={{ width: "100%", color: "rgba(234,246,251,0.4)" }}>
-        <span>or</span>
-      </div>
-      <button className="btn-outline-light" onClick={google} type="button">
-        Continue with Google
-      </button>
+      {/* Only rendered when Google is actually configured — see login/page.tsx. */}
+      {google ? (
+        <>
+          <div className="divider-or" style={{ width: "100%", color: "rgba(234,246,251,0.4)" }}>
+            <span>or</span>
+          </div>
+          <button className="btn-outline-light" onClick={googleSignIn} disabled={busy} type="button">
+            Continue with Google
+          </button>
+        </>
+      ) : null}
 
       <p className="fineprint" style={{ color: "rgba(234,246,251,0.5)" }}>
         By continuing, you agree to the <a href="/terms" style={{ color: "inherit" }}>Terms</a> and{" "}

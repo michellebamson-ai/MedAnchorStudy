@@ -2,7 +2,7 @@
 import { prisma } from "../src/lib/prisma";
 import { formatCitation } from "../src/lib/citations";
 import {
-  searchEvidence, saveSource, evidenceSummary, suggestQuestions, saveResearchQuestion, compareSources,
+  searchEvidence, saveSource, saveLiteratureHit, evidenceSummary, suggestQuestions, saveResearchQuestion, compareSources,
 } from "../src/app/research/evidence-actions";
 import {
   explainConcept, answerBioCheck, suggestTest, analyzeData, reviewPaper, generateStudyPlan, conceptsFromMaterials,
@@ -17,11 +17,44 @@ async function main() {
   const s1 = await searchEvidence("hypertension guidelines", "guidelines");
   console.log("[search] hits:", s1.hits.length, "| first:", s1.hits[0]?.title.slice(0, 50));
   if (!s1.hits.length) throw new Error("no hits");
+  console.log("[search] note:", s1.note.slice(0, 120));
   const s2 = await searchEvidence("hand hygiene", "all");
   console.log("[search] hand hygiene hits:", s2.hits.length);
 
-  const save = await saveSource(s1.hits[0].id);
+  // Live API hits are metadata, not rows, and they sort ahead of the curated
+  // shelf. Saving therefore has two paths, and both need exercising.
+  const liveHit = s1.hits.find((h) => h.live);
+  if (liveHit) {
+    console.log("[search] live hit from:", liveHit.provider, "|", liveHit.title.slice(0, 50));
+    const savedLive = await saveLiteratureHit({
+      title: liveHit.title,
+      authors: liveHit.authors,
+      year: liveHit.year,
+      venue: liveHit.publisher,
+      url: liveHit.url,
+      doi: liveHit.doi ?? null,
+      abstract: liveHit.snippet || null,
+      sourceType: liveHit.sourceType,
+      provider: liveHit.provider ?? "live",
+    });
+    console.log("[save live]", savedLive.message);
+    const dup = await saveLiteratureHit({
+      title: liveHit.title, authors: liveHit.authors, year: liveHit.year, venue: liveHit.publisher,
+      url: liveHit.url, doi: liveHit.doi ?? null, abstract: liveHit.snippet || null,
+      sourceType: liveHit.sourceType, provider: liveHit.provider ?? "live",
+    });
+    console.log("[save live again]", dup.message);
+    if (dup.message !== "Already in your sources.") throw new Error("duplicate live save was not detected");
+  } else {
+    console.log("[search] no live hit (network unavailable) — live path untested this run");
+  }
+
+  // saveSource takes a database row id, so pick a non-live hit.
+  const shelfHit = s1.hits.find((h) => !h.live);
+  if (!shelfHit) throw new Error("no curated-shelf hit to save");
+  const save = await saveSource(shelfHit.id);
   console.log("[save]", save.message);
+  if (!save.ok) throw new Error(`saving a shelf source failed: ${save.message}`);
   const mine = await prisma.source.findMany({ where: { userId: demo.id } });
   console.log("[my sources]:", mine.length);
 

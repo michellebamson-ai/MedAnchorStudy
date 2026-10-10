@@ -15,10 +15,35 @@ import { sendPasswordReset, sendVerification } from "@/lib/mailer";
  * Personalization fields live in the `Profile` model rather than as Better Auth
  * `additionalFields`, which keeps the auth tables exactly as the library expects.
  */
+/**
+ * Google sign-in is wired but inert until credentials exist. Adding the provider
+ * unconditionally with empty strings makes Better Auth accept the button and
+ * then fail at Google's redirect, so it is only included when both values are
+ * real — and the UI reads `googleReady()` to hide the button until then.
+ */
+function googleReady(): boolean {
+  return !!process.env.GOOGLE_CLIENT_ID?.trim() && !!process.env.GOOGLE_CLIENT_SECRET?.trim();
+}
+
+const google = googleReady()
+  ? {
+      clientId: process.env.GOOGLE_CLIENT_ID!.trim(),
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
+    }
+  : undefined;
+
+/** Whether the login screen should offer Google at all. */
+export { googleReady };
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  // Automatic account linking by email is deliberately off. If a student already
+  // has a password account and then signs in with the same Google address, they
+  // get a clear "use your password" message rather than two accounts whose
+  // study history has silently split.
+  ...(google ? { socialProviders: { google } } : {}),
   emailAndPassword: {
     enabled: true,
     // Without these, a student who forgets their password is locked out

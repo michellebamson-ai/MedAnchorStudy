@@ -183,6 +183,8 @@ model Document {
   // Free-form subject label ("Cardiology", "Biostatistics 101", ...).
   subject      String?
   extractedText String?
+  // Why a read failed or was truncated, in plain language for the UI.
+  extractionNote String?
   status       String   @default("uploaded") // uploaded | extracting | analyzed | failed
   error        String?
   createdAt    DateTime @default(now())

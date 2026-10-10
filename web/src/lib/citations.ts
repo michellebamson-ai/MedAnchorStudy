@@ -18,6 +18,17 @@ function authorsOf(s: Citable): string {
   return (s.authors ?? "").trim() || (s.publisher ?? "").trim() || "Unknown author";
 }
 
+/**
+ * Append a full stop only if the field does not already end in one.
+ *
+ * Live titles from PubMed and Crossref very often arrive already punctuated
+ * ("Resistant Hypertension Updated Guidelines."), and a naive `${title}.`
+ * renders as "Guidelines.." in a student's reference list.
+ */
+function stop(s: string): string {
+  return /[.!?]$/.test(s) ? s : `${s}.`;
+}
+
 export function formatCitation(s: Citable, style: CitationStyle): string {
   const authors = authorsOf(s);
   const year = s.year ? String(s.year) : "n.d.";
@@ -28,22 +39,22 @@ export function formatCitation(s: Citable, style: CitationStyle): string {
   switch (style) {
     case "apa": {
       // Authors (Year). Title. Publisher. URL
-      const parts = [`${authors} (${year}).`, `${title}.`];
-      if (publisher && publisher !== authors) parts.push(`${publisher}.`);
+      const parts = [`${authors} (${year}).`, stop(title)];
+      if (publisher && publisher !== authors) parts.push(stop(publisher));
       if (url) parts.push(url);
       return parts.join(" ");
     }
     case "vancouver": {
       // Authors. Title. Publisher; Year. Available from: URL
-      const head = publisher && publisher !== authors ? `${publisher}; ${year}.` : `${year}.`;
-      const parts = [`${authors}.`, `${title}.`, head];
+      const head = publisher && publisher !== authors ? `${stop(publisher)} ${year}.` : `${year}.`;
+      const parts = [stop(authors), stop(title), head];
       if (url) parts.push(`Available from: ${url}`);
       return parts.join(" ");
     }
     case "harvard": {
       // Authors Year, 'Title', Publisher. Available at: URL
       const parts = [`${authors} ${year},`, `'${title}',`];
-      if (publisher && publisher !== authors) parts.push(`${publisher}.`);
+      if (publisher && publisher !== authors) parts.push(stop(publisher));
       if (url) parts.push(`Available at: ${url}`);
       return parts.join(" ");
     }
