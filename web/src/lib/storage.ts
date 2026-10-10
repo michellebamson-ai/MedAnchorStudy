@@ -9,15 +9,12 @@
  *
  * No SDK is bundled. The S3 driver speaks the REST API with SigV4 signed by hand
  * using Web Crypto, which keeps the dependency list at zero and works on any
- * runtime Node supports. If you would rather use the AWS SDK, implement the same
- * three functions and swap it in `storage()` below.
+ * runtime Node supports.
+ *
+ * Configuration is read on every call rather than captured at import. Reading it
+ * once meant a misconfigured import produced a permanently wrong driver, and it
+ * made the signing path impossible to exercise without restarting the process.
  */
-
-const S3_HOST = process.env.OBJECT_STORAGE_ENDPOINT ?? "";
-const BUCKET = process.env.OBJECT_STORAGE_BUCKET ?? "";
-const REGION = process.env.OBJECT_STORAGE_REGION ?? "auto";
-const ACCESS_KEY = process.env.OBJECT_STORAGE_ACCESS_KEY_ID ?? "";
-const SECRET_KEY = process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY ?? "";
 
 export type StorageDriver = "local" | "s3";
 
@@ -29,22 +26,73 @@ export interface StorageStatus {
   problem: string | null;
 }
 
-export function storageStatus(): StorageStatus {
-  if (!S3_HOST || !BUCKET || !ACCESS_KEY || !SECRET_KEY) {
-    const missing = [
-      !S3_HOST && "OBJECT_STORAGE_ENDPOINT",
-      !BUCKET && "OBJECT_STORAGE_BUCKET",
-      !ACCESS_KEY && "OBJECT_STORAGE_ACCESS_KEY_ID",
-      !SECRET_KEY && "OBJECT_STORAGE_SECRET_ACCESS_KEY",
-    ].filter(Boolean);
-    return {
-      driver: "local",
-      configured: false,
-      bucket: null,
-      problem: `Object storage not configured (missing ${missing.join(", ")}); uploads are on local disk and will be lost on redeploy.`,
-    };
+/** Network calls must not hang a student's upload forever. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
+type EnvLike = Record<string, string | undefined>;
+
+interface S3Config {
+  host: string;
+  /** https for R2/S3/B2, http for a local MinIO or the test server. */
+  scheme: "http" | "https";
+  bucket: string;
+  region: string;
+  accessKey: string;
+  secretKey: string;
+}
+
+function env(): EnvLike {
+  return process.env;
+}
+
+/** Parse the endpoint into scheme + host, defaulting to https. */
+function parseEndpoint(raw: string): { host: string; scheme: "http" | "https" } | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const url = new URL(withScheme);
+    return { host: url.host, scheme: url.protocol === "http:" ? "http" : "https" };
+  } catch {
+    return null;
   }
-  return { driver: "s3", configured: true, bucket: BUCKET, problem: null };
+}
+
+function s3Config(e: EnvLike = env()): S3Config | null {
+  const endpoint = e.OBJECT_STORAGE_ENDPOINT ?? "";
+  const bucket = (e.OBJECT_STORAGE_BUCKET ?? "").trim();
+  const accessKey = (e.OBJECT_STORAGE_ACCESS_KEY_ID ?? "").trim();
+  const secretKey = (e.OBJECT_STORAGE_SECRET_ACCESS_KEY ?? "").trim();
+
+  const parsed = parseEndpoint(endpoint);
+  if (!parsed || !bucket || !accessKey || !secretKey) return null;
+
+  return {
+    host: parsed.host,
+    scheme: parsed.scheme,
+    bucket,
+    region: (e.OBJECT_STORAGE_REGION ?? "").trim() || "auto",
+    accessKey,
+    secretKey,
+  };
+}
+
+export function storageStatus(): StorageStatus {
+  if (s3Config()) {
+    return { driver: "s3", configured: true, bucket: (env().OBJECT_STORAGE_BUCKET ?? "").trim(), problem: null };
+  }
+  const missing = [
+    !parseEndpoint(env().OBJECT_STORAGE_ENDPOINT ?? "") && "OBJECT_STORAGE_ENDPOINT",
+    !(env().OBJECT_STORAGE_BUCKET ?? "").trim() && "OBJECT_STORAGE_BUCKET",
+    !(env().OBJECT_STORAGE_ACCESS_KEY_ID ?? "").trim() && "OBJECT_STORAGE_ACCESS_KEY_ID",
+    !(env().OBJECT_STORAGE_SECRET_ACCESS_KEY ?? "").trim() && "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+  ].filter(Boolean);
+  return {
+    driver: "local",
+    configured: false,
+    bucket: null,
+    problem: `Object storage not configured (missing ${missing.join(", ")}); uploads are on local disk and will be lost on redeploy.`,
+  };
 }
 
 /**
@@ -73,31 +121,37 @@ export async function putObject(
   body: Buffer | string
 ): Promise<PutResult> {
   const key = objectKey(userId, filename);
-  const bytes = Buffer.byteLength(body);
+  const cfg = s3Config();
 
-  if (storageStatus().driver === "s3") {
+  if (cfg) {
     const bodyBuf = typeof body === "string" ? Buffer.from(body, "utf8") : body;
-    const res = await signedFetch(key, bodyBuf, "PUT");
+    const res = await signedFetch(cfg, key, bodyBuf, "PUT");
     if (!res.ok) {
       throw new Error(`Storage PUT ${key} failed: ${res.status} ${await res.text().catch(() => "")}`);
     }
-    return { storedPath: `s3://${BUCKET}/${key}`, bytes };
+    return { storedPath: `s3://${cfg.bucket}/${key}`, bytes: bodyBuf.length };
   }
 
+  // Local driver stores under the same sanitised key the S3 driver would use,
+  // so switching drivers later cannot leave a mismatched layout behind.
   const { mkdir, writeFile } = await import("node:fs/promises");
   const { join, dirname } = await import("node:path");
-  const localPath = join("data", "uploads", userId, filename);
-  const abs = join(process.cwd(), "..", localPath);
+  const rel = key.replace(/^uploads\//, "");
+  const abs = join(process.cwd(), "..", "data", "uploads", rel);
   await mkdir(dirname(abs), { recursive: true });
   await writeFile(abs, body);
-  return { storedPath: localPath, bytes };
+  return { storedPath: `data/uploads/${rel}`, bytes: Buffer.byteLength(body) };
 }
 
 /** Read an object back. */
 export async function getObject(storedPath: string): Promise<Buffer | null> {
-  if (storedPath.startsWith("s3://")) {
-    const key = storedPath.replace(`s3://${BUCKET}/`, "");
-    const res = await signedFetch(key, null, "GET");
+  const cfg = s3Config();
+  if (cfg && storedPath.startsWith("s3://")) {
+    const prefix = `s3://${cfg.bucket}/`;
+    // A path from a different bucket is not ours to read.
+    if (!storedPath.startsWith(prefix)) return null;
+    const key = storedPath.slice(prefix.length);
+    const res = await signedFetch(cfg, key, null, "GET");
     if (!res.ok || res.status === 404) return null;
     return Buffer.from(await res.arrayBuffer());
   }
@@ -112,9 +166,11 @@ export async function getObject(storedPath: string): Promise<Buffer | null> {
 
 /** Delete an object. Missing objects are not an error. */
 export async function deleteObject(storedPath: string): Promise<void> {
-  if (storedPath.startsWith("s3://")) {
-    const key = storedPath.replace(`s3://${BUCKET}/`, "");
-    await signedFetch(key, null, "DELETE").catch(() => undefined);
+  const cfg = s3Config();
+  if (cfg && storedPath.startsWith("s3://")) {
+    const prefix = `s3://${cfg.bucket}/`;
+    if (!storedPath.startsWith(prefix)) return;
+    await signedFetch(cfg, storedPath.slice(prefix.length), null, "DELETE").catch(() => undefined);
     return;
   }
   const { rm } = await import("node:fs/promises");
@@ -124,8 +180,16 @@ export async function deleteObject(storedPath: string): Promise<void> {
 
 // ------------------------------------------------------------- SigV4 signing
 
+/** RFC 3986 encoding, which is stricter than encodeURIComponent for !'()* */
+function uriEncode(value: string): string {
+  return encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
 function encodePath(p: string): string {
-  return p.split("/").map((seg) => encodeURIComponent(seg)).join("/");
+  return p.split("/").map((seg) => uriEncode(seg)).join("/");
 }
 
 function hmac(key: Uint8Array, data: string): Promise<Buffer> {
@@ -148,39 +212,42 @@ function hex(buf: Buffer): string {
  * Minimal AWS Signature V4. Enough for R2/B2/S3 GET, PUT and DELETE on a single
  * object; not a general-purpose client.
  */
-async function signedFetch(key: string, body: Buffer | null, method: "GET" | "PUT" | "DELETE"): Promise<Response> {
-  if (!S3_HOST) throw new Error("Object storage is not configured.");
-
+export async function signedFetch(
+  cfg: S3Config,
+  key: string,
+  body: Buffer | null,
+  method: "GET" | "PUT" | "DELETE"
+): Promise<Response> {
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const dateStamp = amzDate.slice(0, 8);
   const payloadHash = hex(await sha256(body ?? Buffer.alloc(0)));
 
-  // The public URL is used as the canonical host; R2 accepts the endpoint host.
-  const host = S3_HOST.replace(/^https?:\/\//, "").replace(/\/$/, "");
-  const url = `https://${host}/${BUCKET}/${encodePath(key)}`;
+  const url = `${cfg.scheme}://${cfg.host}/${cfg.bucket}/${encodePath(key)}`;
+  const canonicalUri = `/${cfg.bucket}/${encodePath(key)}`;
 
+  // Signed headers must be listed in the order they are signed, and that order
+  // is alphabetical. Building it from insertion order happened to work and would
+  // silently break the moment a header was added.
   const headers: Record<string, string> = {
-    host,
+    host: cfg.host,
     "x-amz-content-sha256": payloadHash,
     "x-amz-date": amzDate,
   };
-
-  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
-  const canonicalHeaders = Object.entries(headers)
-    .map(([k, v]) => `${k}:${v.trim()}\n`)
-    .join("");
+  const signedHeaderNames = Object.keys(headers).sort();
+  const signedHeaders = signedHeaderNames.join(";");
+  const canonicalHeaders = signedHeaderNames.map((k) => `${k}:${headers[k].trim()}\n`).join("");
 
   const canonicalRequest = [
     method,
-    `/${BUCKET}/${encodePath(key)}`,
+    canonicalUri,
     "",
     canonicalHeaders,
     signedHeaders,
     payloadHash,
   ].join("\n");
 
-  const scope = `${dateStamp}/${REGION}/s3/aws4_request`;
+  const scope = `${dateStamp}/${cfg.region}/s3/aws4_request`;
   const stringToSign = [
     "AWS4-HMAC-SHA256",
     amzDate,
@@ -188,21 +255,22 @@ async function signedFetch(key: string, body: Buffer | null, method: "GET" | "PU
     hex(await sha256(canonicalRequest)),
   ].join("\n");
 
-  const kDate = await hmac(Buffer.from(`AWS4${SECRET_KEY}`, "utf8"), dateStamp);
-  const kRegion = await hmac(kDate, REGION);
+  const kDate = await hmac(Buffer.from(`AWS4${cfg.secretKey}`, "utf8"), dateStamp);
+  const kRegion = await hmac(kDate, cfg.region);
   const kService = await hmac(kRegion, "s3");
   const kSigning = await hmac(kService, "aws4_request");
   const signature = hex(await hmac(kSigning, stringToSign));
 
   const authorization =
-    `AWS4-HMAC-SHA256 Credential=${ACCESS_KEY}/${scope}, ` +
+    `AWS4-HMAC-SHA256 Credential=${cfg.accessKey}/${scope}, ` +
     `SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
   return fetch(url, {
     method,
     headers: { ...headers, authorization },
-    // Buffer is a Uint8Array, but the DOM lib types only accept the narrower
-    // BodyInit union, so hand it the underlying ArrayBuffer view instead.
     body: method === "PUT" && body ? new Uint8Array(body) : undefined,
+    // Without this a stalled network hangs the upload indefinitely and the
+    // student sees a spinner with no explanation.
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 }
