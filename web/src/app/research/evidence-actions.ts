@@ -289,7 +289,7 @@ export async function evidenceSummary(
 
   // Say which engine wrote this. If Claude was unavailable the summary silently
   // becomes a deterministic template, and the student should know that (PRD §4.3).
-  const engine = provider.isLive ? "Claude" : "the offline template";
+  const engine = provider.isLive ? provider.name : "the offline template";
   return {
     ok: true,
     message: `Summary drafted by ${engine} — check every claim against the full texts before citing.`,

@@ -1,132 +1,118 @@
 # MedAnchor Study — Implementation Plan
 
-**Source:** `PRD.md` (§1–§9 + Agent Steering Notes). **Date:** 2026-09-30.
+**Source:** `PRD.md` (§1–§9 + Agent Steering Notes). **Revised:** 2026-10-04.
 **Rule:** PRD §8 (Scope Discipline) governs every phase — coherent learning loop first, no disconnected tools.
+
+**Status legend:** ✅ done · 🟡 partial (state what's missing) · ⬜ not started
 
 ---
 
-## 0. Where we stand today
+## 0. Where we stand
 
 | Area | State |
 |---|---|
-| Prototype | Vanilla HTML/CSS/JS SPA (`index.html`, `css/style.css` ~40KB, `js/app.js` ~84KB, `js/data.js` ~64KB). Hash router, `localStorage` state, simulated AI engines. Fully working slice: dashboard, Teach Me (5 topics), Explain It Back, cases (4), flashcards (14), summaries, biostats coach (9 modules), exam prep, progress, study plan. |
-| Seed content | 5 topics (RAAS, sens/spec, brachial plexus, incidence vs prevalence, heart failure), 4 cases, 14 flashcards, 9 biostat modules, 18 quiz items — all reusable as DB seed data. |
-| Design | `design.html` dark-theme preview exists; Task-2 refinement locked: `.btn-primary` gradient deep-teal `#04342C` → blue `#0E7490`, `translateY(-2px)` + glow on hover/focus. |
-| Decided stack (steering notes, **not started**) | Next.js App Router + TypeScript · PostgreSQL (Docker, `:5432`) · Prisma ORM · Better Auth (email/password, DB sessions) · uploads in `data/uploads/` · local server `:3000`. No `package.json`, no Prisma schema, no Docker files exist yet. |
-| Toolchain gaps | **Node.js missing, Docker missing** on this machine — must be installed before any Next.js work. |
-| Git | `main`, clean, pushed to `michellebamson-ai/MedAnchorStudy`. `gh` CLI logged in. |
+| Prototype | Static HTML/CSS/JS SPA preserved at repo root. **Superseded** by the Next.js app; retained as reference content. |
+| Stack | Next.js 16.3.8 App Router · TypeScript · Prisma 6 · PostgreSQL 16 (Docker `medanchor-db`, `:5432`) · Better Auth. Light theme default + dark toggle. |
+| Toolchain | Node 24.19, Docker Desktop 29.8, GitHub CLI authenticated, remote `github.com/michellebamson-ai/MedAnchorStudy`. |
+| Content seeded | 5 topics, 4 cases, 14 flashcards, 9 biostat modules, 18 quiz items, 12 evidence sources, communication scenarios. |
+| Tests | `smoke`, `smoke:onboarding`, `smoke:materials`, `smoke:tutor`, `smoke:practice`, `smoke:research`, `smoke:plan`, `smoke:progress`, `check:bypass`, `check:ai`, `demo:reset`. |
+| Last commit | `7181382` Claude provider. Gemini provider in progress, uncommitted. |
+| Auth mode | `BYPASS_AUTH=1` in `web/.env` (gitignored). Production-safe: ignored when `NODE_ENV=production`. |
+| Live integrations | **Zero.** No outbound calls at runtime. Verified by scanning env, deps, source and network calls. |
 
----
+### Phase status
 
-## Phase 0 — Environment & repo foundations
-
-**Goal:** machine can build and run the decided stack.
-1. Install Node.js LTS + Docker Desktop; verify `node --version`, `docker --version`.
-2. Start PostgreSQL via Docker on `:5432` (compose file committed to repo).
-3. Scaffold Next.js (App Router, TypeScript) alongside the prototype — keep the static prototype runnable until the Next.js app reaches parity, then retire it.
-4. Add `.gitignore` entries (`node_modules/`, `.env`, `data/uploads/*` except `.gitkeep`).
-5. **Done when:** `npm run dev` serves on `:3000`, `prisma db push` connects to local Postgres, prototype still runs untouched.
-
----
-
-## Phase 1 — Design system
-
-**Goal:** one token-driven UI language for the whole product (PRD §4.1: clean, mobile-first, dark mode, low cognitive load).
-1. **Tokens:** extract from `design.html` + `style.css` into CSS variables — colors (bg `#07141f` family, brand teal `#04342C`, highlight `#0E7490`), typography scale, spacing, radii, shadows, motion (incl. the Task-2 button treatment as the canonical primary-action pattern).
-2. **Component inventory** (build each once, reuse everywhere): button (primary/secondary/ghost), card, chat bubble + composer, flashcard (3D flip), quiz option, step-reveal, modal, toast, progress ring/bar, mastery badge (`Strong / Needs Review / Needs Attention`), empty state, skeleton loader.
-3. **Themes:** dark (default, per `design.html`) + light; `prefers-color-scheme` + manual toggle, persisted in user preferences.
-4. **Responsive:** mobile-first; sidebar → bottom nav / drawer under ~768px (prototype sidebar pattern carries over).
-5. **Accessibility baseline:** focus-visible rings, aria-live for chat/tutor regions, keyboard-operable cards/modals, captions/transcripts required for any audio UI.
-6. **Done when:** a `/design` (dev-only) gallery page renders every component in both themes; `design.html` concepts merged in and the file retired.
-
----
-
-## Phase 2 — Architecture decisions (ADRs)
-
-**Goal:** lock the technical shape before feature code (PRD §5: one learning system, shared systems, student control).
-Record each as a short ADR in `docs/adr/`:
-
-| # | Decision | Direction |
+| Phase | State | Notes |
 |---|---|---|
-| 1 | Routing | Hash routes → App Router segments: `/dashboard`, `/learn` (upload/ask), `/teach/[topic]`, `/cases`, `/cases/[id]`, `/flashcards`, `/summaries`, `/biostats`, `/biostats/[module]`, `/exam`, `/plan`, `/progress`, `/evidence`, `/communicate`, `/settings`. |
-| 2 | Data access | Prisma only; no raw SQL in routes. Schema mirrors PRD entities (see Phase 3). |
-| 3 | Auth | Better Auth, email/password, DB sessions; all learning data scoped to `userId`; data-export + delete-account endpoints from day one (§4.2, §5.6). |
-| 4 | AI boundary | **Provider abstraction** (`lib/ai/`): `SimulatedProvider` (ports current JS engines 1:1) now, `LlmProvider` later. No feature imports an LLM SDK directly — enables real AI without rewriting features. |
-| 5 | Uploads | `data/uploads/` on disk + `Document` rows (owner, type, extracted text). Text extraction per type is a later phase; store + list first. |
-| 6 | Shared libraries (PRD §5.3) | `lib/personalization/` (profile → adapts depth/style/difficulty), `lib/spaced-repetition/` (SM-2), `lib/evidence/` (source record, citation, compare), `lib/mastery/` (multi-signal status → Strong/Needs Review/Needs Attention). Features consume these; none reimplements them. |
-| 7 | Event log | Every learning interaction appends an `ActivityEvent` (who/what/result). Progress, planner, and spaced repetition read this log — this is what makes the loop *closed* (§6). |
+| 0 Environment & repo | ✅ | Node, Docker, Postgres, scaffold, `.gitignore`. |
+| 1 Design system | ✅ | `/design` gallery, tokens, light+dark, responsive, a11y baseline. |
+| 2 Architecture (ADRs) | ✅ | Provider abstraction, personalization, spaced repetition, evidence, mastery, activity log. |
+| 3 Data layer | ✅ | Schema + seed; DB is source of truth. |
+| 4 Auth & profile | 🟡 | Better Auth + personalization work. **Missing: Settings page, Google Sign-In, data export, delete account.** |
+| 5a Teach Me | ✅ | Four teaching styles, grading, uploaded-doc context. |
+| 5b Analyze & generate | 🟡 | Works for text/Markdown/CSV. **PDF, slides, images and audio are stored but unreadable.** |
+| 5c Cases | ✅ | Progressive disclosure, scoring, feedback. |
+| 5d Biostatistics | ✅ | Concepts, checks, test picker, descriptives, paper review, study plans. Stats in TypeScript, not Python. |
+| 5e Research & Evidence | 🟡 | Curated 12-source library, citations, compare. **No live PubMed/OpenAlex/Crossref retrieval.** |
+| 5f Study Planner | ✅ | Five modes, workload balancing, recovery, time-aware planning. |
+| 5g Communication | ✅ | Role-play, scoring, SOAP. Text only. |
+| 5h Progress | ✅ | Multi-signal statuses, learning paths, loop feed, course views. |
+| 6 Shared capabilities | 🟡 | Spaced repetition done, voice input stubbed. **Connectors not started.** |
+| 7 NFR hardening | ⬜ | Accessibility pass, performance, privacy/security review. |
+| 8 QA & docs | 🟡 | Smoke scripts + demo seed. **No Playwright, no CI, README not updated.** |
+| 9 Deployment | ⬜ | By request. |
 
 ---
 
-## Phase 3 — Data layer
+## Phase 4 remainder — close the auth and data-rights gaps
 
-**Goal:** Prisma schema + seed from existing `data.js`.
-Models (sketch): `User`, `Profile` (level, courses, prefs: depth/style/difficulty/reminders), `Course`, `Topic` (+ `Mastery`), `Document` (upload), `Flashcard` (+ `ReviewState`), `Question`, `Case` (+ `CaseAttempt` steps/decisions), `CommScenario` (+ `CommAttempt`), `ExamGoal`, `StudyPlan` (+ `PlanItem`), `ActivityEvent`, `Source`/`Citation` (evidence engine), `Assignment` (tracker rows, not a feature).
-1. Write schema, migrate, seed: 5 topics, 4 cases, 14 cards, 9 biostat modules, 18 quiz items.
-2. **Done when:** seed script reproduces the prototype's full content from the DB; prototype `data.js` kept as reference, DB is source of truth.
+The most important omission, because it was committed to in ADR-3 "from day one":
 
----
+1. **Settings page** (`/settings` is still a placeholder) — academic level, courses, explanation depth, teaching style, reminders, theme, daily goal.
+2. **Export my data** — every row the student owns as JSON. Data portability is a baseline right, not a feature.
+3. **Delete my account** — cascade all rows and delete uploaded files.
+4. **Google Sign-In** — Better Auth `socialProviders.google`; needs OAuth credentials.
+5. **Email** — password reset and verification cannot deliver today. Needs Resend; without it a lost password is permanent.
 
-## Phase 4 — Auth, profile & personalization shell
+## Phase 6 remainder — document parsing
 
-**Goal:** login works; app knows *who* is learning (§3.9.2, §5.6).
-1. Better Auth email/password + session; protected routes; settings page (academic level, courses, explanation depth, teaching style, reminders, theme).
-2. Migrate `localStorage` state → per-user DB rows (mastery, history, streak, plan, library).
-3. Personalization reads profile + history and exposes `adaptFor(user)` to all features.
-4. **Done when:** two demo users show different depths/styles on the same topic; user can export + delete their data.
+Highest-value remaining feature work, and the one users notice first:
 
----
+1. **PDF text extraction** — `unpdf` (Node) or PyMuPDF (Python sidecar).
+2. **DOCX** — `mammoth`.
+3. **Python sidecar** — SciPy/Statsmodels/Pingouin for inferential statistics that TypeScript cannot reasonably do. Host PDF parsing there too rather than adding a second runtime. Note: no Python installed on this machine yet.
+4. **Audio** — Whisper transcription. Defer; largest cost/complexity item.
+5. **Photo OCR** — defer.
 
-## Phase 5 — Feature builds (in PRD order, each behind the shared libs)
+## Phase 7 remainder — hardening
 
-Build thin-vertical-slices in this order — each usable standalone, each writing `ActivityEvent`s:
+Accessibility pass (keyboard, screen reader, contrast, reduced-motion) · performance and loading states · privacy/security review · citation coverage and accuracy review on health claims.
 
-- **5a. Teach Me Mode (§3.1):** topic entry → leveled explanation → question → grade → misconception handling → deeper follow-ups. Teaching styles (gentle / rapid-fire / exam-pressure / step-by-step). Uploaded-doc context + evidence links when available.
-- **5b. Analyze Docs + Material Generator (§3.2):** upload (PDF/slides/text/image/audio-note) → extract → topics/concepts/formulas/terms → generate: breakdowns, summaries, revision notes, flashcards, practice + application questions, formula walkthroughs, diagram-labeling, case scenarios. Controls: detail, style, format, difficulty, objective.
-- **5c. Case Simulators (§3.3):** progressive disclosure, decisions + reasoning prompts, per-step feedback, difficulty adapts, gaps → profile. Generate cases from uploads (cholera-outbreak pattern).
-- **5d. Biostatistics & Research Companion (§3.4-use):** concept explainers, step-by-step calculation guides, test-selection help, output/table interpretation, research-question → design → methodology → analysis → referencing flow; dataset/paper/note analysis via uploads.
-- **5e. Research & Evidence Engine + Knowledge Support (§3.9.1, §3.5, §3.4-find):** ONE engine (retrieve, evaluate, cite, compare, explain at level, follow-ups); two faces — "do the research" (§3.4) and "find & understand evidence" (§3.5). Source hierarchy (peer-review → guidelines → gov/orgs → textbooks), upload-vs-external distinction, disagreement + uncertainty shown, never presented as fact (§4.3).
-- **5f. Exam Prep & Smart Planner (§3.6):** inputs (exams, courses, syllabi, assignments, deadlines, goals, available time) → schedule → daily goals → time-aware ("2 hours tonight?") → missed-session recovery → workload balancing → study modes (Quick/Deep/Cram/Revision/Catch-Up) → coverage forecasting without fake guarantees. Calendar + assignment/deadline/exam trackers.
-- **5g. Communication Practice (§3.7):** role-play (patient/caregiver/community/colleague), scenarios (history-taking, interviews, education, motivational interviewing, bad news, public-health engagement), text first / voice later, graded feedback (clarity, questioning, empathy, missed info) + SOAP-note practice. Feeds profile.
-- **5h. Progress Tracking (§3.8):** profile (strengths/weaknesses/review-list/mastery/consistency), course/topic/skill views, multi-signal statuses, **recommendations as actions** ("Review X → Teach Me → 5 questions → review in 3 days"), the cross-feature loop made visible.
-- **Done per slice:** happy-path works for the seeded content, events logged, mastery/planner react (prove the loop, e.g. wrong flashcard → mastery dips → plan reprioritises).
+## Phase 8 remainder — QA and delivery
 
----
+Playwright coverage of the core loop · GitHub Actions CI · Sentry with `sendDefaultPii: false` and document contents excluded from breadcrumbs · README refresh · retire the static prototype once nothing references it.
 
-## Phase 6 — Shared capabilities (supporting only, per §8)
+## Phase 9 — deployment (on request)
 
-Wire, don't productise: **Spaced Repetition** (SM-2 intervals incl. 2-day/1-week, exam-aware, feeds planner), **Voice & Audio** (speech-to-text/text-to-speech interfaces stubbed; full voice after text loop is solid), **Connectors** (interface + one reference import, e.g. calendar; student-controlled permissions), **Assignment support** (cross-feature checklist using §3.5/§3.4/§5e — integrity-first: understand/research/outline/improve, never copy-submit per PRD).
+Containerise app + Postgres, managed Postgres, object storage for uploads (local disk loses files on every redeploy), env-based config, backups.
 
 ---
 
-## Phase 7 — NFR hardening (§4)
+## Infrastructure plan (user-decided stack)
 
-Accessibility pass (keyboard, screen reader, contrast, reduced-motion), performance (route-level loading states, image discipline, low-bandwidth behaviour), offline-where-practical (cached summaries/cards/plan), privacy/security review (encryption in transit, upload isolation, session hygiene, .env discipline), accuracy review (citation coverage on health claims, uncertainty labels, calculation checks).
+Decisions locked: **Postgres stays as `postgres:16-alpine`** — no pgvector, no container swap, embeddings deferred, keyword/concept search only.
+
+| Stage | Item | Needs from user |
+|---|---|---|
+| A1 ✅ | Claude provider behind `AIProvider` | `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL` to go live |
+| A2 🟡 | Gemini provider (free tier, no credit card) | `GEMINI_API_KEY` + `GEMINI_MODEL` |
+| A3 ⬜ | Resend — password reset and verification | API key |
+| A4 ⬜ | Cloudflare R2 — object storage behind a `Storage` interface | Bucket + keys |
+| A5 ⬜ | GitHub Actions CI | none |
+| A6 ⬜ | Sentry error tracking | DSN |
+| A7 ⬜ | PubMed / OpenAlex / Crossref retrieval | none (all free) |
+| B | Python sidecar: SciPy/Statsmodels/Pingouin + PyMuPDF | none |
+| C | Gemini failover · Ollama local · Whisper audio | deferred |
+| D | Google Calendar, Drive, OneDrive, Canvas, Moodle, Notion | OAuth apps |
+
+**Provider precedence:** Claude when fully configured, then Gemini, then the deterministic provider. Both need an explicit model id — never defaulted, because model ids are versioned and a wrong guess fails every call.
+
+**Privacy, stated once and applying throughout:** the free Gemini tier's terms allow submitted content to improve Google's products. Development only. Use Claude for anything handling real users. Real patient records belong in neither — Materials tells students this explicitly.
 
 ---
 
-## Phase 8 — QA, demo data & docs
+## Suggested build order from here
 
-Playwright smoke tests for the core loop (upload → teach → quiz → case → plan → progress), unit tests for `lib/` (SM-2, mastery, grading), seeded demo user for first-launch wow (parity with today's prototype demo data), update `README.md` (stack, setup, scripts), retire static prototype only after Next.js parity.
+`4 remainder (settings, export, delete) → email → document parsing → Python sidecar → live evidence retrieval → object storage → CI → hardening → deployment`
 
----
-
-## Phase 9 — Deployment (future, currently local-only per steering notes)
-
-When asked for: containerise (app + Postgres compose), env-based config, backup story for `data/uploads/` + DB, then choose host. Not in scope until Phases 0–8 are solid.
-
----
+Reasoning: settings and data rights close a correctness gap that already exists; email is small and unblocks account recovery; document parsing is what makes Materials usable; storage and CI are deployment prerequisites that get expensive to retrofit late.
 
 ## Risks & open questions
 
-1. **No Node/Docker yet** — Phase 0 blocked until installed.
-2. **Real AI needs a provider + key** — architecture isolates this (ADR-4), but budget/model choice is undecided; simulated provider carries us until then.
-3. **Document parsing** (PDF/slides/audio transcription) is the hardest §3.2 chunk — schedule it after the text-upload loop works.
-4. **Voice + connectors** are Phase 6 for a reason — resist pulling them forward (§8).
-5. **Evidence without a live index** — until retrieval exists, §3.5 runs on curated/seeded sources with honest "limited sources" labelling (§4.3).
-
-## Suggested build order (dependencies)
-
-`0 env` → `1 design tokens + components` → `2 ADRs` → `3 schema + seed` → `4 auth/profile` → `5a teach` → `5h progress (thin)` → `5b analyze/generate` → `5c cases` → `5d biostat` → `5e evidence engine` → `5f planner` → `5g communicate` → `6 shared` → `7 NFR` → `8 QA/docs` → (`9 deploy` on request).
-
-*Why progress (5h) early and thin:* the loop needs a visible scoreboard from the start; flesh it out fully after 5a–5d exist.
+1. **No AI key yet** — the provider pipeline is built and tested but has never made a live call. Highest-priority unverified area.
+2. **Uploads on local disk** — will vanish on any ephemeral host. Must be fixed before deployment, not after.
+3. **No transactional email** — password reset is silently dead.
+4. **No data export or delete** — committed in ADR-3, not delivered.
+5. **No CI** — every build and verification is manual, and one has already hung for 30 minutes.
+6. **Evidence has no live index** — runs on a curated shelf with honest labelling (§4.3), which is acceptable but not the specced capability.
+7. **This machine is underpowered for local models** — 7.9 GB RAM, integrated graphics. Ollama is not viable; do not revisit without new hardware.
