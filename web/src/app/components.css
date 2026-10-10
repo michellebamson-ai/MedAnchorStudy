@@ -2257,3 +2257,33 @@ th { color: var(--text-3); font-weight: 600; font-size: var(--fs-xs); text-trans
 @media (max-width: 620px) {
   .demo-strip { font-size: 0.6875rem; }
 }
+
+/* ---------- Settings ---------- */
+.settings-page { max-width: 760px; }
+.settings-section { padding: var(--sp-6); }
+.settings-h { margin: 0; }
+.settings-section .section-note { margin-top: var(--sp-1); }
+.settings-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-4);
+  margin-top: var(--sp-4);
+}
+.settings-range { width: 100%; accent-color: var(--brand-600); }
+.settings-toggle { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); cursor: pointer; }
+.settings-toggle input { accent-color: var(--brand-600); width: 16px; height: 16px; }
+.settings-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.settings-counts > div { display: flex; flex-direction: column; gap: 2px; }
+.settings-danger {
+  margin-top: var(--sp-6);
+  padding: var(--sp-5);
+  border: 1px solid var(--danger);
+  border-radius: var(--r-md);
+  background: var(--danger-soft);
+}
+.settings-danger .card-sub { color: var(--text-2); margin-bottom: var(--sp-4); }

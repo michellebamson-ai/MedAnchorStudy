@@ -1,5 +1,5 @@
-import { writeFile, mkdir, rm } from "node:fs/promises";
-import { join, extname } from "node:path";
+import { deleteObject, putObject } from "@/lib/storage";
+import { extname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { extractText } from "@/lib/analyze";
@@ -50,18 +50,14 @@ export async function storeUploadedFiles(
   files: IncomingFile[],
   subject: string | null
 ): Promise<string[]> {
-  const dir = join(process.cwd(), "..", "data", "uploads", userId);
-  await mkdir(dir, { recursive: true });
-
   const ids: string[] = [];
   for (const file of files) {
     if (file.size > MAX_BYTES) {
       throw new Error("This file is too large. Try splitting it into smaller parts.");
     }
     const { kind, ext } = kindFor(file.name);
-    const id = randomUUID();
-    const stored = `${id}-${safeName(file.name)}`;
-    await writeFile(join(dir, stored), file.buffer);
+    const stored = `${randomUUID()}-${safeName(file.name)}`;
+    const { storedPath } = await putObject(userId, stored, file.buffer);
 
     const extracted = extractText(file.buffer, file.type || "application/octet-stream", ext);
 
@@ -73,7 +69,7 @@ export async function storeUploadedFiles(
         kind,
         mimeType: file.type || null,
         bytes: file.size,
-        storedPath: join("data", "uploads", userId, stored),
+        storedPath,
         subject,
         extractedText: extracted,
         status: "uploaded",
@@ -91,11 +87,8 @@ export async function storePastedText(
   subject: string | null,
   text: string
 ): Promise<string> {
-  const dir = join(process.cwd(), "..", "data", "uploads", userId);
-  await mkdir(dir, { recursive: true });
-  const id = randomUUID();
-  const stored = `${id}-pasted.txt`;
-  await writeFile(join(dir, stored), text, "utf8");
+  const stored = `${randomUUID()}-pasted.txt`;
+  const { storedPath } = await putObject(userId, stored, text);
 
   const doc = await prisma.document.create({
     data: {
@@ -105,7 +98,7 @@ export async function storePastedText(
       kind: "text",
       mimeType: "text/plain",
       bytes: Buffer.byteLength(text),
-      storedPath: join("data", "uploads", userId, stored),
+      storedPath,
       subject,
       extractedText: text,
       status: "uploaded",
@@ -115,5 +108,5 @@ export async function storePastedText(
 }
 
 export async function removeDocumentFile(storedPath: string): Promise<void> {
-  await rm(join(process.cwd(), "..", storedPath), { force: true });
+  await deleteObject(storedPath);
 }

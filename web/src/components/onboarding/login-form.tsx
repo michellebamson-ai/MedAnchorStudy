@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandMark } from "@/components/brand-mark";
-import { signIn, signUp } from "@/lib/auth-client";
+import { requestPasswordReset, signIn, signUp } from "@/lib/auth-client";
 
 type Mode = "create" | "signin";
 
@@ -40,6 +40,7 @@ export function LoginForm() {
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   const [welcomed, setWelcomed] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
 
   const meter = strengthOf(password);
 
@@ -105,6 +106,51 @@ export function LoginForm() {
     } catch {
       setFormError("Google sign-in isn't connected yet — email works right now.");
     }
+  }
+
+  async function forgot() {
+    if (!email.trim()) {
+      setFormError("Enter your email address first.");
+      return;
+    }
+    setFormError("");
+    setBusy(true);
+    try {
+      await requestPasswordReset({
+        email: email.trim(),
+        redirectTo: `${window.location.origin}/login`,
+      });
+      // Always the same message: never reveal whether an account exists.
+      setResetSent(true);
+    } catch {
+      setFormError("We couldn't start the reset. Try again in a moment.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (resetSent) {
+    return (
+      <div className="onboard-inner" style={{ justifyContent: "center", textAlign: "center" }}>
+        <BrandMark size={72} glow label="MedAnchor Study logo" />
+        <h1 className="onboard-heading" style={{ marginTop: "var(--sp-6)" }}>
+          Check your email
+        </h1>
+        <p className="onboard-sub" style={{ maxWidth: "34ch" }}>
+          If an account exists for {email.trim()}, a reset link is on its way. It expires in an hour.
+        </p>
+        <button
+          className="onboard-skip"
+          onClick={() => {
+            setResetSent(false);
+            setFormError("");
+          }}
+          type="button"
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
   }
 
   if (welcomed) {
@@ -217,9 +263,22 @@ export function LoginForm() {
           ) : (
             <div className="row-between" style={{ marginTop: 4 }}>
               <span />
-              <Link href="/login?forgot=1" style={{ fontSize: "var(--fs-xs)", color: "rgba(234,246,251,0.65)" }}>
+              <button
+                type="button"
+                onClick={forgot}
+                disabled={busy}
+                style={{
+                  background: "none",
+                  border: 0,
+                  padding: 0,
+                  textDecoration: "underline",
+                  color: "rgba(234,246,251,0.65)",
+                  cursor: "pointer",
+                  fontSize: "var(--fs-xs)",
+                }}
+              >
                 Forgot password?
-              </Link>
+              </button>
             </div>
           )}
           <p className="onboard-error">{passwordError}</p>

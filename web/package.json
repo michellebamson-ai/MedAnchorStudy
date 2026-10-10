@@ -25,6 +25,7 @@
     "demo:reset": "tsx scripts/reset-demo.ts",
     "check:bypass": "tsx scripts/check-bypass.ts",
     "check:ai": "tsx scripts/check-ai.ts",
+    "smoke:settings": "tsx scripts/smoke-settings.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

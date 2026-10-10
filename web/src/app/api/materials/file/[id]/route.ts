@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
+import { getObject } from "@/lib/storage";
 
 const MIME_FALLBACK: Record<string, string> = {
   pdf: "application/pdf",
@@ -30,19 +29,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const doc = await prisma.document.findFirst({ where: { id, userId: user.id } });
   if (!doc) return NextResponse.json({ ok: false }, { status: 404 });
 
-  try {
-    const data = await readFile(join(process.cwd(), "..", doc.storedPath));
-    const ext = doc.originalName.split(".").pop()?.toLowerCase() ?? "";
-    const type = doc.mimeType || MIME_FALLBACK[ext] || "application/octet-stream";
-    return new NextResponse(new Uint8Array(data), {
-      headers: {
-        "Content-Type": type,
-        "Content-Length": String(data.length),
-        "Content-Disposition": `attachment; filename="${encodeURIComponent(doc.originalName)}"`,
-        "Cache-Control": "private, max-age=3600",
-      },
-    });
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 404 });
-  }
+  // Read through the storage driver so this works on object storage as well as
+  // local disk; a missing object is a 404, not a crash.
+  const data = await getObject(doc.storedPath);
+  if (!data) return NextResponse.json({ ok: false }, { status: 404 });
+
+  const ext = doc.originalName.split(".").pop()?.toLowerCase() ?? "";
+  const type = doc.mimeType || MIME_FALLBACK[ext] || "application/octet-stream";
+  return new NextResponse(new Uint8Array(data), {
+    headers: {
+      "Content-Type": type,
+      "Content-Length": String(data.length),
+      "Content-Disposition": `attachment; filename="${encodeURIComponent(doc.originalName)}"`,
+      "Cache-Control": "private, max-age=3600",
+    },
+  });
 }
