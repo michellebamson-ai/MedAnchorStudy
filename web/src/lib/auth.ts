@@ -29,6 +29,24 @@ const google = googleReady()
   ? {
       clientId: process.env.GOOGLE_CLIENT_ID!.trim(),
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
+      // Link a Google identity to an existing account when the verified emails
+      // match. This is safe specifically because Google asserts verified
+      // ownership of the address -- an attacker cannot claim someone else's
+      // gmail without controlling it.
+      //
+      // It matters because every account created before Google sign-in existed
+      // has a password and no linked identity, so without this those users are
+      // refused with ACCOUNT_NOT_LINKED and cannot use Google at all. Linking
+      // attaches the credential to the same user row, keeping their existing
+      // progress rather than stranding it in a second account.
+      accountLinking: {
+        enabled: true,
+        // Only Google is listed. Better Auth allows a link when the provider is
+        // trusted OR the incoming email is already verified, so a provider we
+        // do not trust would still be able to attach itself to an unverified
+        // account -- which is why this list stays explicit and short.
+        trustedProviders: ["google"],
+      },
     }
   : undefined;
 

@@ -104,13 +104,24 @@ export function LoginForm({ google = false }: { google?: boolean }) {
     setBusy(true);
     try {
       await signIn.social({ provider: "google", callbackURL: "/profile-setup" });
-    } catch {
-      // Most likely cause: this address already has a password account. We do
-      // not link automatically, because silently merging would split an
-      // existing student's progress across two accounts.
-      setFormError(
-        "Google sign-in didn't complete. If you already have a password here, sign in with it instead."
-      );
+    } catch (err) {
+      // Better Auth error codes, mapped to something a student can act on.
+      const code = (err as { code?: string })?.code ?? "";
+      if (code === "ACCOUNT_NOT_LINKED") {
+        setFormError(
+          mode === "signin"
+            ? "That Google address already has a password account here. Sign in with your password below, or create a fresh account with a different address."
+            : "That Google address already has an account here. Switch to Sign in above and use your password."
+        );
+      } else if (code === "STATE_NOT_FOUND" || code === "INVALID_STATE") {
+        setFormError(
+          "Google sign-in expired before it finished. This usually means the browser blocked third-party cookies — try again in a normal window."
+        );
+      } else {
+        setFormError(
+          "Google sign-in didn't complete. If you already have a password here, use it below instead."
+        );
+      }
     } finally {
       setBusy(false);
     }
