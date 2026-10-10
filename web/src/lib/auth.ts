@@ -29,24 +29,6 @@ const google = googleReady()
   ? {
       clientId: process.env.GOOGLE_CLIENT_ID!.trim(),
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
-      // Link a Google identity to an existing account when the verified emails
-      // match. This is safe specifically because Google asserts verified
-      // ownership of the address -- an attacker cannot claim someone else's
-      // gmail without controlling it.
-      //
-      // It matters because every account created before Google sign-in existed
-      // has a password and no linked identity, so without this those users are
-      // refused with ACCOUNT_NOT_LINKED and cannot use Google at all. Linking
-      // attaches the credential to the same user row, keeping their existing
-      // progress rather than stranding it in a second account.
-      accountLinking: {
-        enabled: true,
-        // Only Google is listed. Better Auth allows a link when the provider is
-        // trusted OR the incoming email is already verified, so a provider we
-        // do not trust would still be able to attach itself to an unverified
-        // account -- which is why this list stays explicit and short.
-        trustedProviders: ["google"],
-      },
     }
   : undefined;
 
@@ -57,10 +39,7 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  // Automatic account linking by email is deliberately off. If a student already
-  // has a password account and then signs in with the same Google address, they
-  // get a clear "use your password" message rather than two accounts whose
-  // study history has silently split.
+  // Google is configured above; linking policy lives under `account`.
   ...(google ? { socialProviders: { google } } : {}),
   emailAndPassword: {
     enabled: true,
@@ -93,6 +72,28 @@ export const auth = betterAuth({
   },
   account: {
     modelName: "Account",
+    // Link a Google identity to an existing account when the emails match.
+    //
+    // This MUST live under the top-level `account` key. Better Auth reads it
+    // from `options.account.accountLinking`, not from
+    // `socialProviders.google.accountLinking`; the nested form is accepted
+    // silently and then ignored, which looks exactly like this setting not
+    // working. Verified against better-auth 1.7.7's getTrustedProviders.
+    //
+    // Safe because Google asserts verified ownership of a gmail address -- an
+    // attacker cannot present someone else's address without controlling it.
+    // Necessary because every account created before Google sign-in existed
+    // holds a password and no linked identity, and without this those users
+    // are refused with ACCOUNT_NOT_LINKED and cannot use Google at all.
+    // Linking attaches the credential to the existing row, so their progress
+    // stays with them rather than being stranded in a second account.
+    accountLinking: {
+      enabled: true,
+      // Google only. Better Auth permits a link when the provider is trusted OR
+      // the incoming email is verified, so keeping this list short is what
+      // stops another provider attaching itself to an unverified account.
+      trustedProviders: ["google"],
+    },
   },
   verification: {
     modelName: "Verification",
