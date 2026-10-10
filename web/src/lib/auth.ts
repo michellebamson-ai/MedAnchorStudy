@@ -46,7 +46,11 @@ export const auth = betterAuth({
     // Without these, a student who forgets their password is locked out
     // permanently. See lib/mailer.ts for the transport.
     sendResetPassword: async ({ user, url }) => {
-      await sendPasswordReset(user.email, url);
+      const res = await sendPasswordReset(user.email, url);
+      // sendMail never throws by design, so a failure here would otherwise be
+      // invisible: Better Auth returns 200 and the student is told to check an
+      // inbox that will never receive anything.
+      if (!res.ok) console.error(`[mail] password reset NOT sent to ${user.email}: ${res.message}`);
     },
     onPasswordReset: async ({ user }) => {
       // Every other session must stop working once the password changes.
@@ -59,7 +63,8 @@ export const auth = betterAuth({
     // Turn on once RESEND_API_KEY and MAIL_FROM are set in production.
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      await sendVerification(user.email, url);
+      const res = await sendVerification(user.email, url);
+      if (!res.ok) console.error(`[mail] verification NOT sent to ${user.email}: ${res.message}`);
     },
   },
   user: {

@@ -27,6 +27,7 @@
     "check:extract": "tsx scripts/check-extract.ts",
     "check:literature": "tsx scripts/check-literature.ts",
     "check:google": "tsx scripts/check-google.ts",
+    "check:reset": "tsx scripts/check-reset.ts",
     "check:bypass": "tsx scripts/check-bypass.ts",
     "check:ai": "tsx scripts/check-ai.ts",
     "smoke:settings": "tsx scripts/smoke-settings.ts",

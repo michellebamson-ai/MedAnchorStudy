@@ -47,7 +47,14 @@ export async function sendMail(mail: Mail): Promise<{ ok: boolean; message: stri
   const status = mailerStatus();
 
   if (!status.configured) {
-    // Never log the token; log enough to develop against.
+    // Development only: print the link so the flow can actually be walked
+    // through without a paid provider. In production the URL contains a live
+    // one-hour account token, so it is never logged -- and preflight blocks a
+    // deploy that reaches this branch with no mailer configured.
+    if (process.env.NODE_ENV !== "production") {
+      const link = mail.text.match(/https?:\/\/\S+/)?.[0];
+      if (link) console.warn(`[mail] DEV ONLY — open this link to continue: ${link}`);
+    }
     console.warn(
       `[mail] NOT SENT to=${mail.to} subject="${mail.subject}" — ` +
         (status.transport === "console"

@@ -5,21 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandMark } from "@/components/brand-mark";
 import { requestPasswordReset, signIn, signUp } from "@/lib/auth-client";
+import { strengthOf } from "@/lib/password";
 
 type Mode = "create" | "signin";
-
-function strengthOf(pw: string): { label: string; pct: number } {
-  if (!pw) return { label: "", pct: 0 };
-  let score = 0;
-  if (pw.length >= 8) score += 1;
-  if (pw.length >= 12) score += 1;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score += 1;
-  if (/\d/.test(pw)) score += 1;
-  if (/[^A-Za-z0-9]/.test(pw)) score += 1;
-  if (score <= 2) return { label: "Weak", pct: 33 };
-  if (score <= 3) return { label: "Okay", pct: 66 };
-  return { label: "Strong", pct: 100 };
-}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -135,9 +123,11 @@ export function LoginForm({ google = false }: { google?: boolean }) {
     setFormError("");
     setBusy(true);
     try {
-      await requestPasswordReset({
+await requestPasswordReset({
         email: email.trim(),
-        redirectTo: `${window.location.origin}/login`,
+        // Must be the page that reads ?token=... and can set a new password.
+        // Pointing this at /login used to discard the token and dead-end.
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       // Always the same message: never reveal whether an account exists.
       setResetSent(true);
