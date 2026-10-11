@@ -25,6 +25,14 @@ const read = (p: string) => readFileSync(join(root, p), "utf8");
 function main() {
   console.log("\nSENTRY WIRING CHECKS\n");
 
+  // Read .env so the report reflects the real configuration rather than
+  // claiming Sentry is off when it is on.
+  try {
+    process.loadEnvFile(join(root, ".env"));
+  } catch {
+    /* no .env here; the checks below still describe the wiring */
+  }
+
   // ---- the SDK is installed and importable ----
   let sdkOk = true;
   let hasCapture = false;

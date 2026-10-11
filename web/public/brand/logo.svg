@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="MedAnchor Study emblem">
+  <title>MedAnchor Study emblem</title>
+  <desc>Glowing cyan-teal medical emblem: spread feathered wings above a classic anchor with ring, crossbar, double-helix coils and flukes sweeping upward to pointed tips, on pure black.</desc>
+
+  <defs>
+    <!-- userSpaceOnUse, not the default objectBoundingBox: the shaft is a
+         vertical line and the crossbar a horizontal one, so both have a
+         degenerate bounding box. A gradient in objectBoundingBox units has
+         nowhere to map on a zero-width box and the stroke silently fails to
+         paint, which is exactly what happened to the shaft in an earlier pass. -->
+    <linearGradient id="core" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="512">
+      <stop offset="0%" stop-color="#DDFDFF"/>
+      <stop offset="35%" stop-color="#74ECF8"/>
+      <stop offset="70%" stop-color="#28CBE4"/>
+      <stop offset="100%" stop-color="#14A8CB"/>
+    </linearGradient>
+
+    <linearGradient id="shaftCore" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="512">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="30%" stop-color="#A8F6FF"/>
+      <stop offset="100%" stop-color="#3FD4EC"/>
+    </linearGradient>
+
+    <!-- Wings fade from deep teal at the shoulder to near-white at the tip. -->
+    <linearGradient id="wingFill" x1="0" y1="0.7" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1FB4D6"/>
+      <stop offset="55%" stop-color="#6EE9F8"/>
+      <stop offset="100%" stop-color="#CCFAFF"/>
+    </linearGradient>
+
+    <radialGradient id="halo" cx="50%" cy="44%" r="50%">
+      <stop offset="0%"   stop-color="#25D3F0" stop-opacity="0.16"/>
+      <stop offset="55%"  stop-color="#12A5C8" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="neon" x="-70%" y="-70%" width="240%" height="240%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12" result="wide"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="tight"/>
+      <feMerge>
+        <feMergeNode in="wide"/>
+        <feMergeNode in="tight"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="rayGlow" x="-70%" y="-70%" width="240%" height="240%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+
+    <!-- One wing, mirrored. Drawn as a filled shape with feather ribs inside,
+         because an outline-only wing reads as an insect rather than a bird. -->
+    <g id="wingHalf">
+      <path d="M250 170
+               C208 128 142 104 76 100
+               C46 98 26 104 16 114
+               C40 122 64 138 82 156
+               C100 174 110 190 118 204
+               C132 212 148 214 162 208
+               C200 194 228 182 250 170 Z"
+            fill="url(#wingFill)" fill-opacity="0.30"
+            stroke="url(#wingFill)" stroke-width="6" stroke-linejoin="round"/>
+      <!-- Feather ribs, longest near the shoulder. -->
+      <g fill="none" stroke="#9BF3FC" stroke-linecap="round" opacity="0.9">
+        <path d="M236 176 C206 158 172 142 136 130" stroke-width="4.6"/>
+        <path d="M214 184 C186 172 158 160 128 154" stroke-width="4.2"/>
+        <path d="M192 194 C166 188 140 184 118 186" stroke-width="3.8"/>
+        <path d="M170 202 C152 204 136 208 124 214" stroke-width="3.4"/>
+        <path d="M148 208 C136 214 128 220 122 226" stroke-width="3"/>
+      </g>
+    </g>
+  </defs>
+
+  <rect width="512" height="512" fill="#000000"/>
+  <rect width="512" height="512" fill="url(#halo)"/>
+
+  <g filter="url(#rayGlow)" stroke="#7FF0FA" fill="none" stroke-linecap="round" opacity="0.5">
+    <path d="M256 8 L256 46"    stroke-width="2.4"/>
+    <path d="M146 20 L162 58"    stroke-width="2"/>
+    <path d="M366 20 L350 58"    stroke-width="2"/>
+    <path d="M58 84 L100 110"    stroke-width="2"/>
+    <path d="M454 84 L412 110"   stroke-width="2"/>
+    <path d="M14 226 L66 228"    stroke-width="1.8"/>
+    <path d="M498 226 L446 228"  stroke-width="1.8"/>
+    <path d="M40 396 L86 366"    stroke-width="1.8"/>
+    <path d="M472 396 L426 366"  stroke-width="1.8"/>
+    <path d="M152 486 L174 448"  stroke-width="1.8"/>
+    <path d="M360 486 L338 448"  stroke-width="1.8"/>
+  </g>
+
+  <g filter="url(#neon)">
+    <!-- ============================= WINGS ============================= -->
+    <use href="#wingHalf"/>
+    <g transform="translate(512,0) scale(-1,1)">
+      <use href="#wingHalf"/>
+    </g>
+
+    <!-- =================== DOUBLE-HELIX COILS =========================
+         Painted before the shaft so the shaft stays legible in front.
+         Strands bow only slightly either side of it. -->
+    <g fill="none" stroke-linecap="round">
+      <path d="M236 212
+               C222 236 290 244 276 268
+               C262 292 248 294 250 314
+               C252 334 284 342 274 364"
+            stroke="#CDFCFF" stroke-width="6.5" opacity="0.97"/>
+      <path d="M276 212
+               C290 236 222 244 236 268
+               C250 292 264 294 262 314
+               C260 334 228 342 238 364"
+            stroke="#CDFCFF" stroke-width="6.5" opacity="0.97"/>
+      <g stroke="#9BF3FC" stroke-width="2.6" opacity="0.55">
+        <path d="M240 228 L272 228"/>
+        <path d="M240 292 L272 292"/>
+        <path d="M240 338 L272 338"/>
+      </g>
+    </g>
+
+    <!-- ================= ANCHOR: ring, shaft, crossbar ================
+         Drawn in front of the coils so the vertical shaft is always the
+         clearest line in the emblem, as a real anchor is. -->
+    <g fill="none" stroke="url(#shaftCore)" stroke-linecap="round">
+      <circle cx="256" cy="64" r="17" stroke-width="8"/>
+      <path d="M256 81 L256 402" stroke-width="12"/>
+      <path d="M190 116 L322 116" stroke-width="9"/>
+    </g>
+
+    <!-- ==================== ANCHOR: flukes ===========================
+         Arms leave the crown, sweep outward, then rise so each tip points
+         up and out — the shape that makes an anchor read as an anchor. -->
+    <g fill="none" stroke="url(#core)" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M256 396
+               C232 428 190 446 152 444
+               C126 442 108 428 102 404
+               C104 426 122 442 148 446
+               C188 451 232 432 258 404"
+            stroke-width="10"/>
+      <path d="M256 396
+               C280 428 322 446 360 444
+               C386 442 404 428 410 404
+               C408 426 390 442 364 446
+               C324 451 280 432 254 404"
+            stroke-width="10"/>
+    </g>
+  </g>
+</svg>

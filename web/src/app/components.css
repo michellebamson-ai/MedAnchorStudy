@@ -86,9 +86,10 @@
   filter: drop-shadow(0 0 18px rgba(43, 179, 186, 0.55))
     drop-shadow(0 0 42px rgba(14, 116, 144, 0.35));
 }
-.brandmark-fallback {
+/* The emblem ships with its own black ground and internal neon bloom, so the
+   only thing left to do here is lift it slightly off a light page. */
+.brandmark img {
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 38%, rgba(111, 211, 214, 0.22), transparent 68%);
 }
 
 .side-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
