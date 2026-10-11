@@ -46,3 +46,8 @@ index.zip
 # Tesseract language data, downloaded on first OCR use (~5MB)
 .tessdata/
 *.traineddata
+
+# Source logo artwork, 1.5 MB. The app uses the resampled derivatives in
+# web/public/brand. Kept out of the repo.
+1001109415*.png
+web/public/brand/logo.png
