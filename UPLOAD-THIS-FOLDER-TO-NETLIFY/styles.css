@@ -1,0 +1,267 @@
+/* MedAnchor Study — demo build
+   Phone-first. Every tap target is at least 44px, which is the smallest a
+   thumb can hit reliably. */
+
+:root {
+  --teal-900: #06262c;
+  --teal-800: #0a333a;
+  --teal-700: #0d3b42;
+  --teal-600: #11525b;
+  --teal-500: #1a6b76;
+  --cyan: #5ce4f2;
+  --cyan-soft: #9bf3fc;
+  --ink: #eafeff;
+  --ink-dim: #a8cdd6;
+  --ink-faint: #6f9aa5;
+  --line: rgba(92, 228, 242, 0.18);
+  --card: rgba(11, 61, 70, 0.55);
+  --radius: 18px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* The tab bar sets display:grid, which would otherwise win over the
+   `hidden` attribute the router uses to hide it on the sign-in screens. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--teal-900);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  /* Stops iOS/Android rubber-banding the whole page sideways. */
+  overflow-x: hidden;
+}
+
+/* ---------------- app shell ---------------- */
+
+#app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 0 18px calc(96px + var(--safe-b));
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.screen { animation: fade .25s ease both; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---------------- onboarding ---------------- */
+
+.welcome {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  gap: 8px;
+}
+
+.welcome img {
+  width: min(190px, 52vw);
+  height: auto;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 26px rgba(92, 228, 242, .35));
+}
+
+.welcome h1 {
+  font-size: clamp(28px, 8vw, 40px);
+  margin: 14px 0 0;
+  letter-spacing: -0.5px;
+  font-weight: 600;
+}
+
+.welcome .tagline {
+  color: var(--ink-dim);
+  font-size: 15px;
+  margin: 6px 0 0;
+  max-width: 30ch;
+}
+
+.dots { display: flex; gap: 8px; margin-top: 26px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal-500); }
+.dots i.on { background: var(--cyan); width: 22px; border-radius: 4px; }
+
+/* ---------------- headers ---------------- */
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 0 18px;
+  position: sticky;
+  top: 0;
+  background: linear-gradient(var(--teal-900) 72%, transparent);
+  z-index: 5;
+}
+.top img { width: 40px; height: 40px; border-radius: 50%; flex: none; }
+.top h2 { margin: 0; font-size: 19px; font-weight: 600; }
+.top .sub { margin: 1px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+
+/* ---------------- cards ---------------- */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.card h3 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+.card p  { margin: 0; color: var(--ink-dim); font-size: 14px; line-height: 1.55; }
+
+/* The one callout used for every server-only feature. */
+.locked {
+  border: 1px dashed rgba(92, 228, 242, .38);
+  background: rgba(26, 107, 118, .16);
+  border-radius: var(--radius);
+  padding: 26px 20px;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.locked .mark { font-size: 30px; opacity: .85; }
+.locked h3 { margin: 10px 0 6px; font-size: 16px; }
+.locked p  { margin: 0 auto; color: var(--ink-dim); font-size: 14px; max-width: 34ch; line-height: 1.6; }
+
+.pill {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 11.5px;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  border: 1px solid rgba(92, 228, 242, .4);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+/* ---------------- lists ---------------- */
+
+.tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 15px 16px;
+  margin-bottom: 11px;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  min-height: 60px;
+}
+.tile:active { transform: scale(.985); }
+.tile .ico { font-size: 21px; width: 26px; text-align: center; flex: none; }
+/* The title and description are spans inside a span, so they need to be told
+   to stack. Without this they sit on one line and run together. */
+.tile .body { display: block; min-width: 0; }
+.tile .t { display: block; font-weight: 600; font-size: 15px; }
+.tile .d { display: block; color: var(--ink-faint); font-size: 12.5px; margin-top: 3px; line-height: 1.45; }
+
+/* ---------------- forms ---------------- */
+
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 13px; color: var(--ink-dim); margin-bottom: 6px; }
+.field input {
+  width: 100%;
+  padding: 15px 16px;
+  font-size: 16px; /* 16px stops iOS zooming on focus */
+  color: var(--ink);
+  background: rgba(6, 38, 44, .8);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+.field input::placeholder { color: var(--ink-faint); }
+
+button.primary, button.ghost {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 13px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+button.primary { background: var(--cyan); color: #04262c; }
+button.primary:active { filter: brightness(.92); }
+button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+button.link {
+  background: none; border: 0; color: var(--ink-dim);
+  font: inherit; font-size: 13px; text-decoration: underline;
+  padding: 12px; min-height: 44px; cursor: pointer;
+}
+
+.err { color: #ff9d9d; font-size: 13px; min-height: 18px; margin: 8px 0 0; }
+
+/* ---------------- stats ---------------- */
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 15px; padding: 14px 10px; text-align: center; }
+.stat b { display: block; font-size: 21px; font-weight: 600; }
+.stat span { font-size: 11.5px; color: var(--ink-faint); }
+
+/* ---------------- bottom tab bar ---------------- */
+
+.tabbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: rgba(6, 38, 44, .96);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line);
+  padding-bottom: var(--safe-b);
+  z-index: 10;
+}
+.tabbar button {
+  background: none; border: 0; color: var(--ink-faint);
+  font: inherit; font-size: 10.5px; line-height: 1.15;
+  padding: 9px 2px 8px;
+  min-height: 56px;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 4px;
+  /* Without this a long label like "Materials" can push the button wider
+     than its grid column and squash its neighbours. */
+  min-width: 0;
+  overflow: hidden;
+}
+.tabbar button span { font-size: 19px; line-height: 1; flex: none; }
+.tabbar button.on { color: var(--cyan); }
+
+/* The wide-screen rail turns the bar into a vertical column, so the icon and
+   label have to sit side by side there instead of stacked. */
+@media (min-width: 760px) {
+  .tabbar {
+    top: 0; bottom: 0; right: auto;
+    width: 190px;
+    grid-template-columns: 1fr;
+    align-content: start;
+    border-top: 0; border-right: 1px solid var(--line);
+  }
+  .tabbar button {
+    flex-direction: row; justify-content: flex-start;
+    gap: 13px; padding: 15px 20px; font-size: 14px;
+  }
+  .tabbar button span { font-size: 17px; width: auto; }
+  #app { margin-left: 190px; padding-bottom: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
