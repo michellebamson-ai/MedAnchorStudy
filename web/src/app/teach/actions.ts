@@ -6,6 +6,7 @@ import { getProvider } from "@/lib/ai/provider";
 import type { Level, TeachTurn } from "@/lib/ai/types";
 import { recordActivity } from "@/lib/mastery";
 import { adaptationBlock, getStudentContext } from "@/lib/personalization";
+import { aiGuard } from "@/lib/ai-budget";
 
 export type TeachingStyle = "gentle" | "rapid_fire" | "exam_pressure" | "step_by_step";
 
@@ -82,6 +83,8 @@ export interface StartTeachResult {
 /** Open a session: level from profile, material matched to the topic. */
 export async function startTeach(input: StartTeachInput): Promise<StartTeachResult> {
   const userId = await requireUserId();
+  const gate = await aiGuard(userId, "tutor");
+  if (gate) throw new Error(gate);
   const topic = input.topic.trim().slice(0, 160);
   if (!topic) throw new Error("Type a topic or pick one from your materials.");
 
@@ -141,6 +144,8 @@ export interface AnswerTeachResult {
 /** Grade one answer, log it, adapt difficulty, and ask the next question. */
 export async function answerTeach(input: AnswerTeachInput): Promise<AnswerTeachResult> {
   const userId = await requireUserId();
+  const gate = await aiGuard(userId, "tutor");
+  if (gate) throw new Error(gate);
   const provider = getProvider();
   const ctx = await getStudentContext(userId);
 
@@ -244,6 +249,10 @@ export async function assistTeach(input: {
   hint?: string;
 }): Promise<{ text: string; source: SourceLabel }> {
   const userId = await requireUserId();
+  // Hint and example reveals are the easiest thing to click repeatedly, and
+  // each one is a model call.
+  const gate = await aiGuard(userId, "assist");
+  if (gate) throw new Error(gate);
   const provider = getProvider();
   const source: SourceLabel = { type: "ai" };
 

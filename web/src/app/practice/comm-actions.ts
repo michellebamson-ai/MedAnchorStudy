@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
+import { aiGuard } from "@/lib/ai-budget";
 
 /** revalidatePath throws outside a request (scripts, tests) — never break on it. */
 function refresh(): void {
@@ -298,7 +299,9 @@ export interface ReplyResult {
 
 /** One conversational turn with the character. */
 export async function replyComm(input: ReplyInput): Promise<ReplyResult> {
-  await requireUserId();
+  const userId = await requireUserId();
+  const gate = await aiGuard(userId, "roleplay");
+  if (gate) throw new Error(gate);
   const provider = getProvider();
   const turn = await provider.roleplay({
     character: input.character,

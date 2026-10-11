@@ -7,6 +7,7 @@ import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
 import { formatCitation, type CitationStyle } from "@/lib/citations";
 import { searchLiterature } from "@/lib/literature";
+import { aiGuard } from "@/lib/ai-budget";
 
 /** revalidatePath throws outside a request (scripts, tests) — never break on it. */
 function refresh(path: string): void {
@@ -91,6 +92,13 @@ export async function searchEvidence(query: string, filter: SourceFilter = "all"
   const user = await getCurrentUser().catch(() => null);
   const q = query.trim();
   if (!q) return { hits: [], note: "", liveAvailable: false };
+
+  // Search is allowed signed out, so the budget is keyed on the user when there
+  // is one and on nothing finer than that otherwise. Without this, cache-busting
+  // by tweaking the query would let one caller hit PubMed, Crossref and OpenAlex
+  // as fast as the network allows.
+  const gate = await aiGuard(user?.id ?? "anonymous", "search");
+  if (gate) return { hits: [], note: gate, liveAvailable: false };
 
   const types = FILTER_TYPES[filter];
   // Match any significant word — students type phrases, not titles.
@@ -378,6 +386,8 @@ export async function evidenceSummary(
   } catch {
     return { ok: false, message: "Sign in to generate summaries." };
   }
+  const gate = await aiGuard(userId, "evidence");
+  if (gate) throw new Error(gate);
   if (!sourceIds.length) return { ok: false, message: "Pick at least one source first." };
   if (!focus.trim()) return { ok: false, message: "Say what the summary should focus on." };
 
@@ -440,6 +450,8 @@ export async function suggestQuestions(
   } catch {
     return { ok: false, message: "Sign in to develop questions." };
   }
+  const gate = await aiGuard(userId, "evidence");
+  if (gate) throw new Error(gate);
   const t = topic.trim().slice(0, 160);
   if (t.length < 3) return { ok: false, message: "Say the topic in a few words first." };
 
@@ -496,11 +508,14 @@ export async function saveResearchQuestion(
 export async function compareSources(
   ids: string[]
 ): Promise<{ ok: boolean; message: string; comparison?: string }> {
+  let userId: string;
   try {
-    await requireUserId();
+    userId = await requireUserId();
   } catch {
     return { ok: false, message: "Sign in to compare sources." };
   }
+  const gate = await aiGuard(userId, "evidence");
+  if (gate) throw new Error(gate);
   if (ids.length < 2) return { ok: false, message: "Pick two sources to compare." };
   const sources = await prisma.source.findMany({ where: { id: { in: ids.slice(0, 3) } } });
   if (sources.length < 2) return { ok: false, message: "Those sources weren't found." };

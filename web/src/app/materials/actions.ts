@@ -9,6 +9,7 @@ import { recordActivity } from "@/lib/mastery";
 import { reviewCard as scheduleReview } from "@/lib/spaced-repetition";
 import { removeDocumentFile, storePastedText, storeUploadedFiles } from "@/lib/documents";
 import { adaptationBlock, getStudentContext, levelFrom } from "@/lib/personalization";
+import { aiGuard } from "@/lib/ai-budget";
 
 export interface ActionResult {
   ok: boolean;
@@ -22,9 +23,8 @@ async function requireUserId(): Promise<string> {
   return user.id;
 }
 
-function safeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "material";
-}
+// Filename sanitising moved to lib/documents.ts (safeName) when storage
+// became a driver; the copy here was left behind and unused.
 
 /** Upload one or more files. Spec messages for too-big and unsupported kinds. */
 export async function uploadMaterial(
@@ -153,6 +153,8 @@ export async function analyzeDocument(documentId: string): Promise<ActionResult>
   } catch {
     return { ok: false, message: "Sign in to analyze materials." };
   }
+  const gate = await aiGuard(userId, "analyze");
+  if (gate) return { ok: false, message: gate };
   const result = await runAnalysis(userId, documentId);
   revalidatePath("/materials");
   return result;
@@ -257,6 +259,10 @@ export async function generateFromDocument(
   } catch {
     return { ok: false, message: "Sign in to generate study tools." };
   }
+  // The most expensive action in the app: one call can span six topics and
+  // several artifact kinds. Budgeted separately from analyze.
+  const gate = await aiGuard(userId, "generate");
+  if (gate) return { ok: false, message: gate };
 
   const doc = await prisma.document.findFirst({
     where: { id: documentId, userId },
@@ -834,8 +840,15 @@ export async function wrongToFlashcard(questionId: string): Promise<ActionResult
   }
   const q = await prisma.question.findUnique({ where: { id: questionId } });
   if (!q) return { ok: false, message: "Question not found." };
+  // Scoped by userId. Without it this looked up any question by id and wrote a
+  // flashcard into the shared pool regardless of who owned it.
   const exists = await prisma.flashcard.findFirst({
-    where: { front: q.stem, origin: "mistake", documentId: q.documentId },
+    where: {
+      front: q.stem,
+      origin: "mistake",
+      documentId: q.documentId,
+      document: { userId },
+    },
   });
   if (exists) return { ok: true, message: "Already saved as a flashcard." };
   await prisma.flashcard.create({

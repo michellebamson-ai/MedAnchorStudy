@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
+import { aiGuard } from "@/lib/ai-budget";
 
 /** revalidatePath throws outside a request (scripts, tests) — never break on it. */
 function refresh(): void {
@@ -156,6 +157,8 @@ export async function startCase(
   } catch {
     return { ok: false, message: "Sign in to run cases." };
   }
+  const gate = await aiGuard(userId, "case");
+  if (gate) return { ok: false, message: gate };
 
   let row;
   if (input.caseId) {
@@ -228,6 +231,8 @@ export interface AnswerStepResult {
 /** Grade one decision + reasoning, save progress, adapt difficulty. */
 export async function answerStep(input: AnswerStepInput): Promise<AnswerStepResult> {
   const userId = await requireUserId();
+  const gate = await aiGuard(userId, "case");
+  if (gate) throw new Error(gate);
   const attempt = await prisma.caseAttempt.findFirst({
     where: { id: input.attemptId, userId },
     include: { case: true },

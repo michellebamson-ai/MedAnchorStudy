@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
+import { aiGuard } from "@/lib/ai-budget";
 import {
   ASSIGNMENT_TYPES,
   WORK_STEPS,
@@ -115,6 +116,8 @@ export async function assignmentChat(input: {
   } catch {
     return { text: "Sign in so your work counts.", done: true };
   }
+  const gate = await aiGuard(userId, "assignment");
+  if (gate) throw new Error(gate);
 
   const assignment = await prisma.assignment.findFirst({
     where: { id: input.assignmentId, userId },

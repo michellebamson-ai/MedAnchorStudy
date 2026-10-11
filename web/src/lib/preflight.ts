@@ -12,6 +12,7 @@
 
 import { storageStatus } from "./storage";
 import { mailerStatus } from "./mailer";
+import { rateLimitConfigured } from "./rate-limit";
 import { isBypassOn } from "./bypass";
 import { describeProvider } from "./ai/provider";
 
@@ -113,9 +114,26 @@ export function runPreflight(env: EnvLike = process.env): Check[] {
       "Transactional email",
       false,
       production,
-      "not configured — a student who forgets their password cannot recover the account"
+      "not configured — a student who forgets their password cannot recover the account",
+      "RESEND_API_KEY and MAIL_FROM (resend.com/api-keys)"
     );
   }
+
+  // ---- Rate limiting on the paid AI keys ----
+  // A blocker in production: without it, any signed-in account can spend the
+  // provider's whole daily allowance, and the free tiers are very small.
+  const rl = rateLimitConfigured();
+  push(
+    "AI rate limiting",
+    rl,
+    production,
+    rl
+      ? "upstash redis, shared across instances"
+      : production
+        ? "not configured — nothing stops one account draining the AI provider's quota"
+        : "not configured (in-process fallback only; fine locally)",
+    rl ? null : "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (console.upstash.com)"
+  );
 
   // ---- Warning: AI provider ----
   const providers = describeProvider(env);
