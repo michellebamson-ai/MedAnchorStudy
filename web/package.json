@@ -31,6 +31,7 @@
     "check:storage": "tsx scripts/check-storage.ts",
     "check:ocr": "tsx scripts/check-ocr.ts",
     "check:scan": "tsx scripts/check-scan.ts",
+    "check:storage:live": "tsx scripts/check-storage-live.ts",
     "check:bypass": "tsx scripts/check-bypass.ts",
     "check:ai": "tsx scripts/check-ai.ts",
     "smoke:settings": "tsx scripts/smoke-settings.ts",
