@@ -31,6 +31,7 @@
     "check:storage": "tsx scripts/check-storage.ts",
     "check:ocr": "tsx scripts/check-ocr.ts",
     "check:ratelimit": "tsx scripts/check-ratelimit.ts",
+    "check:sentry": "tsx scripts/check-sentry.ts",
     "secret": "tsx scripts/set-secret.ts",
     "check:scan": "tsx scripts/check-scan.ts",
     "check:storage:live": "tsx scripts/check-storage-live.ts",
@@ -41,6 +42,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@sentry/nextjs": "^11.6.0",
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
     "better-auth": "^1.7.7",

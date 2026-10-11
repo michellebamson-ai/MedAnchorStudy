@@ -135,6 +135,20 @@ export function runPreflight(env: EnvLike = process.env): Check[] {
     rl ? null : "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (console.upstash.com)"
   );
 
+  // ---- Error reporting: a warning, not a blocker ----
+  // The app works without it, but you find out about crashes from students
+  // rather than from a dashboard, which is a bad way to find out.
+  const sentry = (env.SENTRY_DSN ?? "").trim();
+  push(
+    "Error reporting",
+    !!sentry,
+    false,
+    sentry
+      ? "sentry, server and browser"
+      : "not configured — you will hear about crashes from students, not from a dashboard",
+    sentry ? null : "SENTRY_DSN (sentry.io) via: npm run secret -- SENTRY_DSN"
+  );
+
   // ---- Warning: AI provider ----
   const providers = describeProvider(env);
   if (providers.every((p) => p === "simulated")) {
