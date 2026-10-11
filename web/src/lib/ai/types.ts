@@ -18,6 +18,16 @@ export interface TeachRequest {
   turn: number;
   /** Everything said so far in this tutoring session. */
   transcript: { role: "tutor" | "student"; text: string }[];
+  /**
+   * Text of the student's uploaded material for this topic. PRD §3.1.10 makes
+   * this the primary learning context, so it is part of the request contract
+   * rather than something a caller may remember to pass.
+   */
+  sourceText?: string;
+  /** Title of that material, so the tutor can refer to it naturally. */
+  sourceTitle?: string;
+  /** Personalisation block from lib/personalization (PRD §3.9.2). */
+  adaptation?: string;
 }
 
 export interface TeachTurn {
@@ -39,6 +49,8 @@ export interface GradeRequest {
   expectedTerms: string[];
   /** Optional context: the passage/concept the answer should reflect. */
   sourceText?: string;
+  /** Personalisation block from lib/personalization (PRD §3.9.2). */
+  adaptation?: string;
 }
 
 export interface GradeResult {
@@ -68,6 +80,8 @@ export interface GenerateRequest {
   format: string;
   difficulty: number; // 1..5
   objective?: string;
+  /** Personalisation block from lib/personalization (PRD §3.9.2). */
+  adaptation?: string;
 }
 
 export interface GeneratedArtifact {

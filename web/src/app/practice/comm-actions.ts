@@ -450,6 +450,10 @@ export async function endComm(input: {
     activity: "comm_session",
     score: Number(overall.toFixed(2)),
     maxScore: 1,
+    // Without this the session appeared in the activity feed but never moved a
+    // topic score, because recordActivity only refreshes mastery when a
+    // topicSlug is present. PRD §3.7.6 / §3.8.1.
+    topicSlug: scenario.topicSlug,
     detail: { scenarioId: scenario.id, scenario: scenario.title },
   });
 

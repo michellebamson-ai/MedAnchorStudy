@@ -6,6 +6,8 @@ import { getCurrentUser } from "@/lib/session";
 import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
 import { descriptives, parseTable, STAT_LIBRARY, type TableAnalysis } from "@/lib/biostat";
+import { adaptationBlock, getStudentContext, levelFrom } from "@/lib/personalization";
+import type { Level } from "@/lib/ai/types";
 
 export type { StatTopic } from "@/lib/biostat";
 
@@ -22,6 +24,23 @@ async function requireUserId(): Promise<string> {
   const user = await getCurrentUser().catch(() => null);
   if (!user) throw new Error("UNAUTHENTICATED");
   return user.id;
+}
+
+/**
+ * PRD §3.4.10 / §3.9.2: biostatistics explanations should match the student's
+ * level and preferences. Every call site here used to hard-code
+ * level: "student", so a resident and a first-year student got identical
+ * explanations. Falls back safely when signed out.
+ */
+async function studentContext(): Promise<{ level: Level; adaptation: string | undefined }> {
+  try {
+    const user = await getCurrentUser().catch(() => null);
+    if (!user) return { level: "student", adaptation: undefined };
+    const ctx = await getStudentContext(user.id);
+    return { level: levelFrom(ctx.academicLevel), adaptation: adaptationBlock(ctx) };
+  } catch {
+    return { level: "student", adaptation: undefined };
+  }
 }
 
 export interface ConceptContent {
@@ -66,13 +85,16 @@ export async function explainConcept(slug: string): Promise<ConceptContent | nul
     }
   }
 
-  // Generated coverage for topics beyond the seeded nine — labelled as such.
-  const provider = getProvider();
+const { level, adaptation } = await studentContext();
+    // Generated coverage for topics beyond the seeded nine — labelled as such.
+    const provider = getProvider();
   const g = await provider.generate({
     kind: "explanation",
     sourceText: `Explain ${entry.title} for a health-sciences student: plain definition, when to use it, the key formula, one healthcare example, and the most common student mistake.`,
     topic: entry.title,
-    level: "student",
+    level,
+    adaptation,
+
     detailLevel: 3,
     style: "examples",
     format: "markdown",
@@ -113,12 +135,20 @@ export async function answerBioCheck(
     expectedTerms: keywords.length ? keywords : [slug.replace(/-/g, " ")],
   });
   if (user) {
+    // Resolve the module's topic so a scored self-check actually moves mastery.
+    // recordActivity skips refreshMastery without a topicSlug, so every check
+    // answered here was previously logged and then discarded from the model.
+    const mod = await prisma.bioModule.findUnique({
+      where: { slug },
+      select: { topicSlug: true },
+    });
     await recordActivity({
       userId: user,
       kind: "biostat",
       activity: "concept_check",
       score: graded.score,
       maxScore: 1,
+      topicSlug: mod?.topicSlug ?? null,
       detail: { slug },
     }).catch(() => null);
   }
@@ -154,12 +184,14 @@ export async function suggestTest(input: {
     reasoning = "Time-to-event outcomes need methods that handle censoring — people followed for different lengths.";
   }
 
+  const { level, adaptation } = await studentContext();
   const provider = getProvider();
   const g = await provider.generate({
     kind: "explanation",
     sourceText: `For a student: how to run ${test} step by step, what each step means, and the two most common mistakes. Context: ${input.goal.slice(0, 300)}`,
     topic: test,
-    level: "student",
+    level,
+    adaptation,
     detailLevel: 3,
     style: "step_by_step",
     format: "markdown",
@@ -227,13 +259,16 @@ export async function analyzeData(input: {
         ? "A numeric outcome across groups: compare means (t-test for two groups, ANOVA for more)."
         : "Mostly categorical data: describe frequencies first, then chi-square for associations.";
 
-  const provider = getProvider();
-  const desc = numNames.map((c) => `${c}: n=${numeric[c].n}, mean ${numeric[c].mean}, SD ${numeric[c].sd}`).join("; ");
+const { level, adaptation } = await studentContext();
+    const provider = getProvider();
+    const desc = numNames.map((c) => `${c}: n=${numeric[c].n}, mean ${numeric[c].mean}, SD ${numeric[c].sd}`).join("; ");
   const g = await provider.generate({
     kind: "explanation",
     sourceText: `Dataset: ${rows.length} rows. ${desc || "No numeric columns found."} Research question: ${input.researchQuestion.slice(0, 300)}. Explain step by step what these numbers mean in plain language, then what to do next.`,
     topic: "interpreting these results",
-    level: "student",
+    level,
+    adaptation,
+
     detailLevel: 3,
     style: "step_by_step",
     format: "markdown",
@@ -290,12 +325,15 @@ export async function reviewPaper(input: {
     ["limitations", "List author-noted limitations plus two the authors may have missed."],
     ["quality", "Assess strengths, weaknesses and overall quality for a student reader."],
   ];
-  for (const [key, instruction] of jobs) {
+  const { level, adaptation } = await studentContext();
+    for (const [key, instruction] of jobs) {
     const g = await provider.generate({
       kind: "explanation",
       sourceText: `${instruction}\n\nPAPER (${title}):\n${text.slice(0, 4500)}`,
       topic: `paper review: ${key}`,
-      level: "student",
+    level,
+    adaptation,
+
       detailLevel: 3,
       style: "simple",
       format: "markdown",
@@ -316,11 +354,14 @@ export async function methodologyChat(input: {
   transcript: Array<{ role: "tutor" | "student"; text: string }>;
   message: string;
 }): Promise<{ text: string }> {
-  await requireUserId();
-  const provider = getProvider();
-  const turn = await provider.teach({
+await requireUserId();
+    const { level, adaptation } = await studentContext();
+    const provider = getProvider();
+    const turn = await provider.teach({
     topic: "research methodology review",
-    level: "student",
+    level,
+    adaptation,
+
     teachingStyle: "gentle",
     turn: Math.min(4, input.transcript.length),
     transcript: [
@@ -378,12 +419,15 @@ export async function generateStudyPlan(input: {
   if (parts.some((p) => p.trim().length < 5)) {
     return { ok: false, message: "Fill in each part briefly — a sentence each is enough." };
   }
+  const { level, adaptation } = await studentContext();
   const provider = getProvider();
   const g = await provider.generate({
     kind: "explanation",
     sourceText: `Turn this into a clean, ordered study plan document with headings (Goal, Population, Measurements, Design, Sample size thinking, Data collection, Analysis plan, Ethics) and a sample-size and ethics checklist:\nGoal: ${input.goal}\nPopulation: ${input.population}\nMeasurements: ${input.measurements}\nDesign: ${input.design}\nAnalysis: ${input.analysis}\nEthics: ${input.ethics}`,
     topic: "study plan document",
-    level: "student",
+    level,
+    adaptation,
+
     detailLevel: 4,
     style: "technical",
     format: "markdown",

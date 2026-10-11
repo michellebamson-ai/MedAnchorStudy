@@ -144,6 +144,7 @@ model Topic {
   questions    Question[]
   cases        CaseScenario[]
   bioModules   BioModule[]
+  commScenarios CommScenario[]
   mastery      TopicMastery[]
   planItems    PlanItem[]
   paths        LearningPath[]
@@ -314,6 +315,10 @@ model CommScenario {
   title      String
   // patient | caregiver | community_member | colleague
   character  String @default("patient")
+  // Which Topic this scenario exercises, so a communication session can move
+  // topic mastery (PRD 3.7.6). Null for custom scenarios with no curriculum target.
+  topicSlug   String?
+  topic       Topic?   @relation(fields: [topicSlug], references: [slug], onDelete: SetNull)
   kind       String @default("history_taking") // history_taking | health_education | motivational_interviewing | bad_news | public_health
   difficulty Int    @default(3)
   brief      String

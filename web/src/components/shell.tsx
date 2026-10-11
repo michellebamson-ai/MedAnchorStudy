@@ -68,7 +68,9 @@ export function Shell({
         <nav className="side-nav" aria-label="Primary">
           {links}
         </nav>
-        <div className="side-user">
+        {/* A link, not a div: this is the other natural route into Settings,
+            and PRD §4.1 asks that important things be easy to find. */}
+        <Link className="side-user" href="/settings" aria-label="Your account and settings">
           <span className="side-avatar" aria-hidden="true">
             {initial}
           </span>
@@ -76,7 +78,7 @@ export function Shell({
             <span className="side-user-name">{name}</span>
             <span className="side-user-role">{role}</span>
           </span>
-        </div>
+        </Link>
       </aside>
 
       {/* ---------------- Mobile drawer ---------------- */}
@@ -121,20 +123,13 @@ export function Shell({
             <GlobalSearch topics={topics} placeholder={searchPlaceholder} />
             <div className="topbar-right">
               <ThemeSwitch />
-              <button className="icon-btn" type="button" aria-label="Notifications">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-                </svg>
-              </button>
-              <button className="icon-btn" type="button" aria-label="Bookmarks">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-              </button>
-              <span className="avatar" aria-label="Student profile">
+              {/* These two rendered as buttons with no onClick, so they looked
+                  interactive and did nothing. Removed rather than left as
+                  decoration that implies a notifications or bookmarks feature
+                  the app does not have. */}
+              <Link className="avatar" href="/settings" aria-label="Your account and settings">
                 {initial}
-              </span>
+              </Link>
             </div>
           </div>
         </header>

@@ -8,6 +8,7 @@ import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
 import { reviewCard as scheduleReview } from "@/lib/spaced-repetition";
 import { removeDocumentFile, storePastedText, storeUploadedFiles } from "@/lib/documents";
+import { adaptationBlock, getStudentContext, levelFrom } from "@/lib/personalization";
 
 export interface ActionResult {
   ok: boolean;
@@ -237,7 +238,8 @@ export type GenerateControls = {
   style: string; // simple | technical | examples
   difficulty: number; // 1 easy, 3 medium, 5 hard
   goal: string; // understand | exam_prep | quick_review
-  make: string[]; // notes | summaries | flashcards | questions | cases
+  make: string[]; // notes | summaries | revision_notes | quick_review | explanations
+  //              | formulas | flashcards | questions | cases
   topicLabels: string[]; // checked topics; empty = all
 };
 
@@ -277,22 +279,28 @@ export async function generateFromDocument(
   const sourceText = doc.extractedText.slice(0, 6000);
 
   const provider = getProvider();
-  const profile = await prisma.profile.findUnique({ where: { userId } });
-  const level = profile?.academicLevel === "resident" ? "advanced" : "student";
+  // PRD §3.9.2: generation should reflect level, course, weak areas and
+  // upcoming assessments. adaptationBlock() existed for exactly this and had
+  // no call sites, so those settings were collected and discarded.
+  const ctx = await getStudentContext(userId);
+  const level = levelFrom(ctx.academicLevel);
+  const adaptation = adaptationBlock(ctx);
   const examNote = controls.goal === "exam_prep" ? "Made for exam prep." : null;
 
   const base = {
     detailLevel: controls.detail,
     style: controls.style,
+    // Settings' explanation depth now actually scales output length.
     format: "markdown",
-    difficulty: controls.difficulty,
+    difficulty: Math.min(5, Math.max(1, Math.round((controls.difficulty + ctx.questionDifficulty) / 2))),
     objective: controls.goal,
+    adaptation,
   };
 
   let made = 0;
 
   for (const topic of topicNames.slice(0, 6)) {
-    const req = { ...base, sourceText, topic, level: level as "student" | "advanced" };
+    const req = { ...base, sourceText, topic, level };
 
     if (controls.make.includes("notes")) {
       const g = await provider.generate({ ...req, kind: "breakdown" });
@@ -316,6 +324,65 @@ export async function generateFromDocument(
           userId,
           kind: "summary",
           title: `${topic} — high-yield summary`,
+          body: { ...asObject(g.body), source: labelFor(doc), examNote },
+          ...base,
+        },
+      });
+      made += 1;
+    }
+
+    // The four kinds below had specs and renderers but no generator, so their
+    // tabs could never populate. PRD §3.2.3 lists all of them.
+    if (controls.make.includes("revision_notes")) {
+      const g = await provider.generate({ ...req, kind: "revision_notes" });
+      await prisma.artifact.create({
+        data: {
+          documentId,
+          userId,
+          kind: "revision_notes",
+          title: `${topic} — revision notes`,
+          body: { ...asObject(g.body), source: labelFor(doc), examNote },
+          ...base,
+        },
+      });
+      made += 1;
+    }
+    if (controls.make.includes("quick_review")) {
+      const g = await provider.generate({ ...req, kind: "quick_review" });
+      await prisma.artifact.create({
+        data: {
+          documentId,
+          userId,
+          kind: "quick_review",
+          title: `${topic} — quick review`,
+          body: { ...asObject(g.body), source: labelFor(doc), examNote },
+          ...base,
+        },
+      });
+      made += 1;
+    }
+    if (controls.make.includes("explanations")) {
+      const g = await provider.generate({ ...req, kind: "explanation" });
+      await prisma.artifact.create({
+        data: {
+          documentId,
+          userId,
+          kind: "explanation",
+          title: `${topic} — concept explanation`,
+          body: { ...asObject(g.body), source: labelFor(doc), examNote },
+          ...base,
+        },
+      });
+      made += 1;
+    }
+    if (controls.make.includes("formulas")) {
+      const g = await provider.generate({ ...req, kind: "formula_walkthrough" });
+      await prisma.artifact.create({
+        data: {
+          documentId,
+          userId,
+          kind: "formula_walkthrough",
+          title: `${topic} — formula walkthrough`,
           body: { ...asObject(g.body), source: labelFor(doc), examNote },
           ...base,
         },

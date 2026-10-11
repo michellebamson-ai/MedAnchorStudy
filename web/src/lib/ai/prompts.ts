@@ -58,10 +58,12 @@ export function buildTeach(req: TeachRequest): CallSpec<TeachTurn> {
     exam_pressure: "pressuring, exam-condition questioning that expects precision",
     step_by_step: "explicitly sequenced, never skipping a step",
   };
-  const system = [
-    SAFETY,
+  const system = [SAFETY,
     "You are the tutor in a Socratic session. You guide the student to the answer; you do not hand it over.",
     `Your style is ${styleNote[req.teachingStyle]}. Academic level: ${req.level}.`,
+    req.sourceText
+      ? "The student uploaded material on this topic. Ground your questions in it and prefer its terminology, examples and framing. If it does not cover something the student asks about, say so rather than inventing course content."
+      : "No material was uploaded for this topic, so teach from general knowledge.",
     "End every message with one question the student must answer next.",
     JSON_ONLY,
   ].join(" ");
@@ -74,11 +76,18 @@ export function buildTeach(req: TeachRequest): CallSpec<TeachTurn> {
   const prompt = [
     `Topic: ${req.topic}`,
     `Turn: ${req.turn}`,
+    // Bounded: a 60-page scan would otherwise crowd out the actual question.
+    req.sourceText
+      ? `The student's material${req.sourceTitle ? ` ("${req.sourceTitle}")` : ""}:\n${req.sourceText.slice(0, 4000)}`
+      : "",
+    req.adaptation ?? "",
     transcript ? `So far:\n${transcript}` : "This is the opening turn.",
     "Reply with JSON:",
     '{"text": string, "question": string, "expectedTerms": string[], "hints": string[], "readMissedConcepts": string[]}',
     "`expectedTerms` are the anchor terms the student should use when explaining this back.",
-  ].join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   return {
     system,
@@ -117,6 +126,7 @@ export function buildGrade(req: GradeRequest): CallSpec<GradeResult> {
     `Prompt: ${req.prompt}`,
     `Expected anchor terms: ${req.expectedTerms.join(", ") || "(none supplied)"}`,
     req.sourceText ? `Source material:\n${req.sourceText.slice(0, 3000)}` : "",
+    req.adaptation ?? "",
     `Student's explanation:\n${req.answer}`,
     "Reply with JSON:",
     '{"score": number, "hit": string[], "missing": string[], "misconceptions": string[], "feedback": string, "modelAnswer": string}',
@@ -162,6 +172,7 @@ export function buildGenerate(req: GenerateRequest): CallSpec<GeneratedArtifact>
     `Artifact kind: ${req.kind.replace(/_/g, " ")}`,
     `Topic: ${req.topic}`,
     req.objective ? `Objective: ${req.objective}` : "",
+    req.adaptation ?? "",
     `Source material:\n${(req.sourceText || "(none)").slice(0, 12000)}`,
   ]
     .filter(Boolean)

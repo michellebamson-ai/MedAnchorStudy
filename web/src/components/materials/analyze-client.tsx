@@ -37,6 +37,10 @@ const GOALS = ["Understand", "Exam prep", "Quick review"];
 const MAKE = [
   ["notes", "Notes"],
   ["summaries", "Summaries"],
+  ["revision_notes", "Revision notes"],
+  ["quick_review", "Quick review"],
+  ["explanations", "Explanations"],
+  ["formulas", "Formula walkthroughs"],
   ["flashcards", "Flashcards"],
   ["questions", "Practice questions"],
   ["cases", "Cases"],

@@ -13,6 +13,10 @@ export const SIDEBAR_NAV = [
   { href: "/research", label: "Research", icon: "❑", role: "Biostatistics, methods and evidence" },
   { href: "/plan", label: "Study Plan", icon: "☷", role: "Schedule, exams and recovery" },
   { href: "/progress", label: "Progress", icon: "◔", role: "How I'm developing" },
+  // Personalisation plus the data rights PRD §4.2 requires students to reach.
+  // Settings was fully built but absent here, so the only route to exporting or
+  // deleting an account was the search palette or typing the URL.
+  { href: "/settings", label: "Settings", icon: "⚙", role: "Preferences, account and your data" },
 ] as const;
 
 export interface HubItem {
@@ -53,7 +57,10 @@ export const RESEARCH_GROUPS: HubGroup[] = [
     blurb: "Understand the numbers behind the evidence.",
     items: [
       { href: "/biostats", label: "Biostatistics", blurb: "Step-by-step coaching through statistical method." },
-      { href: "/explore", label: "Research Methods", blurb: "Designs, variables and methodology help." },
+      // Was /explore, which is a redirect to the home dashboard, so searching
+      // "Research Methods" silently dropped the student on Home. The
+      // methodology flow is a real view on the Biostatistics tab.
+      { href: "/research?tab=biostat&flow=method", label: "Research Methods", blurb: "Designs, variables and methodology help." },
     ],
   },
   {

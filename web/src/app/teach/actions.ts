@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getProvider } from "@/lib/ai/provider";
 import type { Level, TeachTurn } from "@/lib/ai/types";
 import { recordActivity } from "@/lib/mastery";
+import { adaptationBlock, getStudentContext } from "@/lib/personalization";
 
 export type TeachingStyle = "gentle" | "rapid_fire" | "exam_pressure" | "step_by_step";
 
@@ -92,12 +93,19 @@ export async function startTeach(input: StartTeachInput): Promise<StartTeachResu
     : await materialForTopic(userId, topic);
 
   const provider = getProvider();
+  const ctx = await getStudentContext(userId);
   const turn = await provider.teach({
     topic,
     level,
     teachingStyle: input.style,
     turn: 0,
     transcript: [],
+    // PRD §3.1.10: the student's own material is the primary context. It was
+    // matched and displayed but never sent, so the tutor answered from general
+    // knowledge while the UI claimed otherwise.
+    sourceText: matched?.text,
+    sourceTitle: matched?.title,
+    adaptation: adaptationBlock(ctx),
   });
 
   return {
@@ -134,12 +142,23 @@ export interface AnswerTeachResult {
 export async function answerTeach(input: AnswerTeachInput): Promise<AnswerTeachResult> {
   const userId = await requireUserId();
   const provider = getProvider();
+  const ctx = await getStudentContext(userId);
+
+  // Grade against the same material the question was asked from, so the student
+  // is marked on their own lecture's content rather than a generic rubric.
+  const material = input.documentId
+    ? await prisma.document
+        .findFirst({ where: { id: input.documentId, userId } })
+        .then((d) => (d?.extractedText ? { title: d.title, text: d.extractedText } : null))
+    : await materialForTopic(userId, input.topic);
 
   const graded = await provider.grade({
     prompt: input.topic,
     answer: input.answer.slice(0, 3000),
     expectedTerms:
       input.expectedTerms?.length ? input.expectedTerms : lastExpected(input.transcript),
+    sourceText: material?.text,
+    adaptation: adaptationBlock(ctx),
   });
 
   const transcript: TurnMessage[] = [
@@ -152,6 +171,9 @@ export async function answerTeach(input: AnswerTeachInput): Promise<AnswerTeachR
     teachingStyle: input.style,
     turn: input.turn,
     transcript,
+    sourceText: material?.text,
+    sourceTitle: material?.title,
+    adaptation: adaptationBlock(ctx),
   });
 
   // Difficulty adapts to the answers, starting from the chosen Medium.
