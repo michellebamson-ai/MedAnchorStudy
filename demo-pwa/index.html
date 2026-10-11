@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover keeps the notch from covering the header on Android -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MedAnchor Study</title>
+<meta name="description" content="An AI-powered learning workspace for healthcare and health-sciences students.">
+
+<!-- These three are what make Android offer "Install app" -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d3b42">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app"></div>
+
+<div class="tabbar" id="tabbar" hidden>
+  <button data-go="home"     class="on"><span>⌂</span>Home</button>
+  <button data-go="materials"><span>▤</span>Materials</button>
+  <button data-go="tutor"    ><span>◆</span>Tutor</button>
+  <button data-go="plan"     ><span>☷</span>Plan</button>
+  <button data-go="progress" ><span>◔</span>Progress</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
