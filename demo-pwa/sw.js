@@ -7,7 +7,7 @@
  */
 
 // Bump this when a file changes, or the old copy is served from cache.
-const CACHE = "medanchor-demo-v1";
+const CACHE = "medanchor-demo-v2";
 
 const PRECACHE = [
   "/",
@@ -18,6 +18,7 @@ const PRECACHE = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/logo.png",
+  "/icons/maskable-512.png",
 ];
 
 self.addEventListener("install", (event) => {

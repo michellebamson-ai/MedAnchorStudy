@@ -2,12 +2,16 @@
   "name": "MedAnchor Study",
   "short_name": "MedAnchor",
   "description": "An AI-powered learning workspace for healthcare and health-sciences students.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a2b31",
   "theme_color": "#0d3b42",
+  "categories": ["education", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -22,10 +26,22 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/logo.png",
+      "src": "/icons/maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/#home"
+    },
+    {
+      "name": "AI Tutor",
+      "short_name": "Tutor",
+      "url": "/#tutor"
     }
   ]
 }
