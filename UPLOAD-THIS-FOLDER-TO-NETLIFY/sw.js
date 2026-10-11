@@ -7,18 +7,21 @@
  */
 
 // Bump this when a file changes, or the old copy is served from cache.
-const CACHE = "medanchor-demo-v2";
+const CACHE = "medanchor-demo-v3";
 
+// Paths are relative, not "/icons/...". The app is served from a subfolder on
+// GitHub Pages (https://user.github.io/MedAnchorStudy/), where a leading slash
+// points at the domain root and 404s. Relative paths work under any subfolder.
 const PRECACHE = [
-  "/",
-  "/index.html",
-  "/styles.css",
-  "/app.js",
-  "/manifest.json",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/logo.png",
-  "/icons/maskable-512.png",
+  "./",
+  "./index.html",
+  "./styles.css",
+  "./app.js",
+  "./manifest.json",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/maskable-512.png",
+  "./icons/logo.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -69,7 +72,7 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() => {
           // Offline and not cached: for a navigation, fall back to the shell.
-          if (request.mode === "navigate") return caches.match("/index.html");
+          if (request.mode === "navigate") return caches.match("./index.html");
           return new Response("", { status: 504, statusText: "Offline" });
         });
     })
