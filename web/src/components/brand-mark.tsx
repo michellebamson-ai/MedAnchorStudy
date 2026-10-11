@@ -33,7 +33,10 @@ export function BrandMark({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/brand/logo.svg"
+        // Bumped whenever the artwork changes. Browsers cache images
+        // aggressively, and a logo that silently fails to update is worse than
+        // one that is a few bytes larger in the markup.
+        src="/brand/logo.svg?v=3"
         alt=""
         width={size}
         height={size}
