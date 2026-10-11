@@ -42,3 +42,7 @@ data/uploads/*
 
 # old local backup
 index.zip
+
+# Tesseract language data, downloaded on first OCR use (~5MB)
+.tessdata/
+*.traineddata

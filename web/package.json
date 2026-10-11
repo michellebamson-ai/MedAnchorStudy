@@ -29,6 +29,8 @@
     "check:google": "tsx scripts/check-google.ts",
     "check:reset": "tsx scripts/check-reset.ts",
     "check:storage": "tsx scripts/check-storage.ts",
+    "check:ocr": "tsx scripts/check-ocr.ts",
+    "check:scan": "tsx scripts/check-scan.ts",
     "check:bypass": "tsx scripts/check-bypass.ts",
     "check:ai": "tsx scripts/check-ai.ts",
     "smoke:settings": "tsx scripts/smoke-settings.ts",
@@ -43,6 +45,7 @@
     "prisma": "^6.19.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tesseract.js": "^7.0.0",
     "unpdf": "^1.8.1"
   },
   "devDependencies": {
