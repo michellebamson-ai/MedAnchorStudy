@@ -2,6 +2,8 @@ import { extractText as pdfExtractText, getDocumentProxy, extractImages } from "
 import mammoth from "mammoth";
 import { unzipSync, strFromU8 } from "fflate";
 import { ocrImages, OCR_ENABLED } from "@/lib/ocr";
+import { transcribeAudio } from "@/lib/transcribe";
+import { probePdf } from "@/lib/pdf-probe";
 import { rawToPng } from "@/lib/png";
 
 /**
@@ -29,6 +31,10 @@ export interface ExtractionResult {
   reason?: string;
   /** Page or slide count where known. */
   units?: number;
+  /** Timed transcript segments, for audio. Lets a student find a term by timestamp. */
+  segments?: { start: number; end: number; text: string }[];
+  /** Audio length in seconds. */
+  duration?: number;
 }
 
 /** Below this we treat the result as noise rather than content. */
@@ -65,11 +71,7 @@ export async function extractDocumentText({ buffer, mimeType, ext }: ExtractInpu
       case "image":
         return await fromImage(buffer);
       case "audio":
-        return {
-          text: null,
-          engine: "audio",
-          reason: "Audio is not transcribed yet. Upload your slides or notes as text instead.",
-        };
+        return await fromAudio(buffer);
       default:
         return {
           text: null,
@@ -115,17 +117,38 @@ async function fromPdf(buffer: Buffer): Promise<ExtractionResult> {
 
   if (clean.text) return clean;
 
-  // No text layer, so it is almost certainly a scan. Recover the page images
+  // No text from the first reader. Before assuming the whole file is a scan,
+  // ask PyMuPDF, which recovers text from several PDFs unpdf cannot read at all
+  // and — more usefully — says which pages are genuinely blank of text.
+  const probe = await probePdf(buffer).catch(() => ({ available: false, ok: false }) as const);
+  if (probe.available && probe.ok && probe.text?.trim()) {
+    const viaPymupdf = finalize(probe.text, "pdf", probe.totalPages ?? totalPages);
+    if (viaPymupdf.text) {
+      return {
+        ...viaPymupdf,
+        reason: probe.encrypted
+          ? "This PDF is password protected for editing; its text was read without the password."
+          : undefined,
+      };
+    }
+  }
+
+  // Still no text, so it is almost certainly a scan. Recover the page images
   // and read those instead of giving up.
-  const scanned = await ocrScannedPdf(buffer, totalPages);
+  const scanned = await ocrScannedPdf(buffer, totalPages, probe.available && probe.ok ? probe.pagesNeedingOcr : undefined);
   if (scanned.text) return scanned;
+
+  const passwordNote =
+    probe.available && probe.encrypted
+      ? " This PDF is password protected, so its contents cannot be read."
+      : "";
 
   return {
     text: null,
     engine: "pdf",
-    reason: OCR_ENABLED
+    reason: (OCR_ENABLED
       ? "This PDF has no text layer and its page images could not be read. If it is a scan, OCR it first, or upload the original slides."
-      : "No text found in this PDF, which usually means it is a scan of images.",
+      : "No text found in this PDF, which usually means it is a scan of images.") + passwordNote,
     units: totalPages,
   };
 }
@@ -141,20 +164,39 @@ const MIN_OCR_SIDE = 200;
  * pixels per page, which are re-encoded before OCR because the recogniser
  * rejects raw data outright.
  */
-async function ocrScannedPdf(buffer: Buffer, totalPages: number): Promise<ExtractionResult> {
+async function ocrScannedPdf(
+  buffer: Buffer,
+  totalPages: number,
+  /** From PyMuPDF. When present, only these pages are worth recognising. */
+  pagesNeedingOcr?: number[]
+): Promise<ExtractionResult> {
   if (!OCR_ENABLED || !totalPages) return { text: "", engine: "pdf", confidence: 0 } as ExtractionResult;
 
   const pages: string[] = [];
   let confidenceSum = 0;
   let counted = 0;
+  // Declared outside the try because the summary reason is built after it.
+  let limit = 0;
+  let targetCount = 0;
 
   try {
     const pdf = await getDocumentProxy(new Uint8Array(buffer));
     // The first few pages carry the concepts worth summarising; a 400-page
     // scanned handbook would otherwise burn minutes of CPU.
-    const limit = Math.min(totalPages, 12);
+    limit = Math.min(totalPages, 12);
 
-    for (let page = 1; page <= limit; page++) {
+    // Recognising a page costs seconds. A document that is typed for pages 1-3
+    // and scanned from page 14 should have only those later pages sent to the
+    // recogniser, so unpdf's partial result does not turn into wasted CPU or a
+    // gap in the extracted text.
+    const target = pagesNeedingOcr?.length
+      ? pagesNeedingOcr.filter((p) => p <= limit)
+      : Array.from({ length: limit }, (_, i) => i + 1);
+    targetCount = target.length;
+
+    if (!target.length) return { text: "", engine: "pdf", confidence: 0 } as ExtractionResult;
+
+    for (const page of target) {
       const images = await extractImages(pdf, page).catch(() => []);
       // The page picture is by far the largest thing on it; the rest are
       // artefacts like logos and borders.
@@ -177,11 +219,14 @@ async function ocrScannedPdf(buffer: Buffer, totalPages: number): Promise<Extrac
   }
 
   const text = pages.join("\n\n").trim();
+  const skipped = limit - targetCount;
   return {
     text,
     engine: "pdf",
     units: totalPages,
-    reason: text && totalPages > 12 ? `Only the first ${12} pages were read.` : undefined,
+    reason:
+      (text && totalPages > 12 ? `Only the first ${12} pages were read.` : undefined) ??
+      (skipped > 0 ? `${skipped} page(s) already had readable text and were not re-recognised.` : undefined),
     confidence: counted ? confidenceSum / counted : 0,
   } as ExtractionResult;
 }
@@ -205,6 +250,40 @@ async function fromImage(buffer: Buffer): Promise<ExtractionResult> {
     };
   }
   return finalize(result.text, "image");
+}
+
+/**
+ * Recorded lectures.
+ *
+ * Runs locally through faster-whisper, so a recording made in a clinical
+ * placement never leaves the machine. Every failure path returns a reason the
+ * student can act on rather than an empty summary they would read as "the app
+ * understood my lecture and found nothing".
+ */
+async function fromAudio(buffer: Buffer): Promise<ExtractionResult> {
+  const transcript = await transcribeAudio(buffer);
+
+  if (!transcript.ok || !transcript.text) {
+    return {
+      text: null,
+      engine: "audio",
+      reason:
+        transcript.error ??
+        "No speech was detected in that recording. It may be silent, or music only.",
+    };
+  }
+
+  const result = finalize(transcript.text, "audio");
+  return {
+    ...result,
+    segments: transcript.segments,
+    duration: transcript.duration,
+    // Speech models mis-hear multi-syllable clinical terms, so the UI is told
+    // what was actually said rather than presenting it as a perfect record.
+    reason: transcript.words && transcript.words < 20
+      ? `Only ${transcript.words} words were detected, which may mean the recording is short or mostly silent. Check the transcript before relying on it.`
+      : undefined,
+  };
 }
 
 async function fromDocx(buffer: Buffer): Promise<ExtractionResult> {

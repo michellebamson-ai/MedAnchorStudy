@@ -10,6 +10,11 @@
  */
 
 import { zipSync, strToU8 } from "fflate";
+import { execFile } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { extractDocumentText } from "../src/lib/document-text";
 
 const BODY =
@@ -105,6 +110,59 @@ function buildPptx(): Buffer {
 
 // --------------------------------------------------------------------------
 
+/** Is the optional speech engine present? Decides skip versus fail. */
+async function hasFasterWhisper(): Promise<boolean> {
+  const python = process.env.PYTHON_PATH?.trim();
+  if (!python) return false;
+  return new Promise((resolve) => {
+    execFile(python, ["-c", "import faster_whisper"], { timeout: 20_000 }, (e) => resolve(!e));
+  });
+}
+
+/** A minimal 8 kHz mono PCM WAV header, written by hand to avoid a dependency. */
+function wavHeader(dataBytes: number, sampleRate: number): Buffer {
+  const head = Buffer.alloc(44);
+  head.write("RIFF", 0);
+  head.writeUInt32LE(36 + dataBytes, 4);
+  head.write("WAVE", 8);
+  head.write("fmt ", 12);
+  head.writeUInt32LE(16, 16);
+  head.writeUInt16LE(1, 20); // PCM
+  head.writeUInt16LE(1, 22); // mono
+  head.writeUInt32LE(sampleRate, 24);
+  head.writeUInt32LE(sampleRate * 2, 28); // byte rate
+  head.writeUInt16LE(2, 32); // block align
+  head.writeUInt16LE(16, 34); // bits
+  head.write("data", 36);
+  head.writeUInt32LE(dataBytes, 40);
+  return head;
+}
+
+/** Two seconds of a 220 Hz tone: valid audio containing no speech. */
+function buildToneWav(): Buffer {
+  const rate = 16_000;
+  const samples = rate * 2;
+  const data = Buffer.alloc(samples * 2);
+  for (let i = 0; i < samples; i++) {
+    data.writeInt16LE(Math.round(12_000 * Math.sin((2 * Math.PI * 220 * i) / rate)), i * 2);
+  }
+  return Buffer.concat([wavHeader(data.length, rate), data]);
+}
+
+/**
+ * A real spoken sentence, committed as a fixture.
+ *
+ * Synthesising speech with arithmetic produces a buzz that voice-activity
+ * detection correctly rejects, so the only honest fixture is a recording of an
+ * actual voice. Windows TTS produced this one; it is 4 seconds of a person
+ * saying a sentence containing two clinical terms, which is exactly the case
+ * the feature exists for.
+ */
+function loadSpeechFixture(): Buffer | null {
+  const p = path.join(dirname(fileURLToPath(import.meta.url)), "fixtures", "speech.wav");
+  return existsSync(p) ? readFileSync(p) : null;
+}
+
 async function main() {
   console.log("\nEXTRACTION CHECKS\n");
 
@@ -169,6 +227,70 @@ async function main() {
     ext: "pdf",
   });
   check("corrupt pdf: fails without throwing", corrupt.text === null && !!corrupt.reason);
+
+  // ---- Audio ----
+  // Speech recognition is slow and the model is optional, so this is skipped
+  // rather than failed when faster-whisper is absent. A missing optional
+  // dependency is an environment fact, not a regression.
+  const canTranscribe = await hasFasterWhisper();
+  if (!canTranscribe) {
+    console.log("  [SKIP] audio: faster-whisper not installed");
+    const audioSkip = await extractDocumentText({
+      buffer: Buffer.from("not really audio"),
+      mimeType: "audio/mpeg",
+      ext: "mp3",
+    });
+    check(
+      "audio: missing engine explains itself rather than returning blank",
+      audioSkip.text === null && !!audioSkip.reason,
+      audioSkip.reason ?? ""
+    );
+  } else {
+    const fixture = loadSpeechFixture();
+    if (!fixture) {
+      console.log("  [SKIP] audio: scripts/fixtures/speech.wav is missing");
+    } else {
+    const spoken = await extractDocumentText({
+      buffer: fixture,
+      mimeType: "audio/wav",
+      ext: "wav",
+    });
+    check(
+      "audio: a spoken recording produces a transcript",
+      !!spoken.text && spoken.text.length > 20,
+      `${spoken.text?.length ?? 0} chars`
+    );
+    check("audio: engine is reported as audio", spoken.engine === "audio", spoken.engine);
+    check(
+      "audio: timed segments come back",
+      Array.isArray(spoken.segments) && spoken.segments.length > 0,
+      `${spoken.segments?.length ?? 0} segments`
+    );
+    check("audio: duration is reported", typeof spoken.duration === "number", `${spoken.duration ?? "none"}s`);
+    check(
+      "audio: segments carry usable timestamps",
+      (spoken.segments ?? []).every((s) => s.start >= 0 && s.end > s.start),
+      (spoken.segments ?? []).map((s) => `${s.start}-${s.end}`).join(" ").slice(0, 60)
+    );
+    check(
+      "audio: a clinical term survived transcription",
+      /angiotensin/i.test(spoken.text ?? ""),
+      (spoken.text ?? "").slice(0, 90)
+    );
+    console.log(`         transcript: "${(spoken.text ?? "").trim().slice(0, 120)}"`);
+
+    const silent = await extractDocumentText({
+      buffer: buildToneWav(),
+      mimeType: "audio/wav",
+      ext: "wav",
+    });
+    check(
+      "audio: a silent recording is not claimed as transcribed",
+      silent.text === null && !!silent.reason,
+      silent.reason ?? ""
+    );
+    }
+  }
 
   const tiny = await extractDocumentText({
     buffer: Buffer.from("too short", "utf8"),
