@@ -108,14 +108,25 @@ export function runPreflight(env: EnvLike = process.env): Check[] {
   // ---- Blocker in production: password reset must work ----
   const mail = mailerStatus();
   if (mail.configured) {
-    push("Transactional email", true, false, `resend, from ${mail.from}`);
+    // Report the transport that will actually be used. Hardcoding "resend" here
+    // would have claimed Resend was delivering while Brevo did, which matters
+    // because the two have very different setup requirements.
+    push("Transactional email", true, false, `${mail.transport}, from ${mail.from}`);
+    if (mail.problem) {
+      push(
+        "Preferred email provider",
+        false,
+        false,
+        mail.problem
+      );
+    }
   } else {
     push(
       "Transactional email",
       false,
       production,
       "not configured — a student who forgets their password cannot recover the account",
-      "RESEND_API_KEY and MAIL_FROM (resend.com/api-keys)"
+      "BREVO_API_KEY and BREVO_SENDER, or RESEND_API_KEY and MAIL_FROM (resend.com/api-keys)"
     );
   }
 
