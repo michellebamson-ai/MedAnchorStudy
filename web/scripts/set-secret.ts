@@ -142,6 +142,30 @@ async function main() {
       console.log("  Empty value. Nothing changed.");
       process.exit(0);
     }
+
+    // A key pasted from a browser or a code block often arrives wrapped in
+    // quotes, or carrying control characters from the terminal. Storing those
+    // verbatim produces a key that looks present but fails every API call, and
+    // the failure surfaces much later as a confusing provider error.
+    const cleaned = value
+      .split("")
+      .filter((c) => {
+        const n = c.charCodeAt(0);
+        return n > 32 && n < 127;
+      })
+      .join("")
+      .replace(/^["']+|["']+$/g, "");
+
+    if (cleaned !== value) {
+      const dropped = value.length - cleaned.length;
+      console.log(`  Removed ${dropped} stray character(s) from the pasted value.`);
+      value = cleaned;
+    }
+
+    if (!value) {
+      console.log("  Nothing usable was pasted. Nothing changed.");
+      process.exit(0);
+    }
   }
 
   const how = setSecret(name, value);
