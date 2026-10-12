@@ -24,6 +24,7 @@
     "seed:evidence": "tsx --env-file=.env scripts/seed-evidence.ts",
     "demo:reset": "tsx --env-file=.env scripts/reset-demo.ts",
     "preflight": "tsx --env-file=.env scripts/preflight.ts",
+    "check:pdf-probe": "tsx --env-file=.env scripts/check-pdf-probe.ts",
     "check:extract": "tsx --env-file=.env scripts/check-extract.ts",
     "check:literature": "tsx --env-file=.env scripts/check-literature.ts",
     "check:google": "tsx --env-file=.env scripts/check-google.ts",

@@ -60,3 +60,6 @@ web/public/brand/logo.png
 # Netlify CLI local state.
 .netlify/
 UPLOAD-THIS-FOLDER-TO-NETLIFY/.netlify/
+
+# Scratch PDFs written while building or debugging test fixtures.
+web/mixed.pdf
