@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getProvider } from "@/lib/ai/provider";
 import { recordActivity } from "@/lib/mastery";
 import { descriptives, parseTable, STAT_LIBRARY, type TableAnalysis } from "@/lib/biostat";
+import { runBiostatistics } from "@/lib/biostat-python";
 import { adaptationBlock, getStudentContext, levelFrom } from "@/lib/personalization";
 import type { Level } from "@/lib/ai/types";
 
@@ -208,7 +209,19 @@ export async function suggestTest(input: {
 export async function analyzeData(input: {
   tableText: string;
   researchQuestion: string;
-}): Promise<{ ok: boolean; message: string; analysis?: TableAnalysis & { suggestion: string; interpretation: string[] } }> {
+}): Promise<{
+  ok: boolean;
+  message: string;
+  analysis?: TableAnalysis & {
+    suggestion: string;
+    interpretation: string[];
+    /** Tests computed by the Python engine, empty when it could not run. */
+    tests?: Array<Record<string, unknown>>;
+    statisticsWarnings?: string[];
+    statisticsSummary?: string;
+    engineError?: string | null;
+  };
+}> {
   let userId: string;
   try {
     userId = await requireUserId();
@@ -229,6 +242,11 @@ export async function analyzeData(input: {
       numeric[c] = descriptives(vals);
     }
   });
+
+  // Run the real tests. The TypeScript descriptives above are kept as the
+  // fallback and as a cheap summary, but a student asking "is this difference
+  // significant" needs an actual test, not an AI describing a mean.
+  const engine = await runBiostatistics({ columns, rows });
 
   // Grouped means for a simple chart: first categorical column × first numeric.
   let chart: TableAnalysis["chart"] = null;
@@ -262,9 +280,21 @@ export async function analyzeData(input: {
 const { level, adaptation } = await studentContext();
     const provider = getProvider();
     const desc = numNames.map((c) => `${c}: n=${numeric[c].n}, mean ${numeric[c].mean}, SD ${numeric[c].sd}`).join("; ");
+  // Hand the model the computed results and require it to explain them, rather
+  // than letting it infer statistics from a table summary. When the engine ran,
+  // the findings are stated as fact in the prompt.
+  const findings = (engine.tests ?? [])
+    .map((t) => `${t.test}: p=${t.p ?? "n/a"}${t.significant ? " (significant at 0.05)" : " (not significant)"}${t.effect && typeof t.effect === "object" ? `, effect size ${JSON.stringify((t.effect as { cohens_d?: number }).cohens_d)}` : ""}`)
+    .join("; ");
+  const caveat = (engine.warnings ?? []).length
+    ? `\nAssumption problems found in the data: ${(engine.warnings ?? []).slice(0, 3).join(" | ")}. Mention these to the student.`
+    : "";
+  const statsBlock = findings
+    ? `\n\nTests that were actually computed for this table: ${findings}.${caveat}\nExplain these results to the student. Do not invent a different test or a different p-value. If a result is not significant, say so plainly rather than implying a trend.`
+    : "";
   const g = await provider.generate({
     kind: "explanation",
-    sourceText: `Dataset: ${rows.length} rows. ${desc || "No numeric columns found."} Research question: ${input.researchQuestion.slice(0, 300)}. Explain step by step what these numbers mean in plain language, then what to do next.`,
+    sourceText: `Dataset: ${rows.length} rows. ${desc || "No numeric columns found."} Research question: ${input.researchQuestion.slice(0, 300)}. Explain step by step what these numbers mean in plain language, then what to do next.${statsBlock}`,
     topic: "interpreting these results",
     level,
     adaptation,
@@ -285,8 +315,24 @@ const { level, adaptation } = await studentContext();
 
   return {
     ok: true,
-    message: "Analysis ready.",
-    analysis: { columns, rows: rows.length, numeric, preview: rows.slice(0, 6), chart, suggestion, interpretation },
+    message: engine.ran
+      ? "Analysis ready."
+      : "Analysis ready, without statistical tests - the Python engine did not run.",
+    analysis: {
+      columns,
+      rows: rows.length,
+      numeric,
+      preview: rows.slice(0, 6),
+      chart,
+      suggestion,
+      interpretation,
+      // The computed results travel with the analysis so the UI can show the
+      // actual test, p-value and effect size alongside the AI's explanation.
+      tests: engine.ran ? (engine.tests ?? []) : [],
+      statisticsWarnings: engine.warnings ?? [],
+      statisticsSummary: engine.summary,
+      engineError: engine.ran ? null : (engine.error ?? null),
+    },
   };
 }
 

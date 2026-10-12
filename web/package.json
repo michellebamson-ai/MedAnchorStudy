@@ -35,6 +35,7 @@
     "secret": "tsx --env-file=.env scripts/set-secret.ts",
     "check:scan": "tsx --env-file=.env scripts/check-scan.ts",
     "check:storage:live": "tsx --env-file=.env scripts/check-storage-live.ts",
+    "check:biostat": "tsx --env-file=.env scripts/check-biostat.ts",
     "check:bypass": "tsx --env-file=.env scripts/check-bypass.ts",
     "check:ai": "tsx --env-file=.env scripts/check-ai.ts",
     "smoke:settings": "tsx --env-file=.env scripts/smoke-settings.ts",
