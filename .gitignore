@@ -51,3 +51,12 @@ index.zip
 # web/public/brand. Kept out of the repo.
 1001109415*.png
 web/public/brand/logo.png
+
+# Android signing key and local key material. Never commit.
+.secrets-backup/
+*.jks
+*.keystore
+
+# Netlify CLI local state.
+.netlify/
+UPLOAD-THIS-FOLDER-TO-NETLIFY/.netlify/
