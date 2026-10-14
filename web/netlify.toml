@@ -1,0 +1,66 @@
+# Netlify deployment for the full MedAnchor Study app.
+#
+# The demo in ../demo-pwa is static and deploys by drag-and-drop. This is the
+# real application: a Next.js server with a PostgreSQL database, which Netlify
+# runs as serverless functions and cannot build from a dragged folder.
+#
+# Deploy with:
+#   npx netlify deploy --build --prod
+#
+# Required environment variables. Set these in the Netlify dashboard rather than
+# committing them; the values below are the variable NAMES only, so a future
+# reader can see what the app needs without seeing any secret.
+#
+#   DATABASE_URL            pooled PostgreSQL connection string
+#   BETTER_AUTH_SECRET      openssl rand -base64 32
+#   BETTER_AUTH_URL         must equal this site's public origin, or Google
+#                           sign-in and password-reset links point at localhost
+#   GEMINI_API_KEY          AI tutor and content generation
+#   GEMINI_MODEL            model id; 2.0 and 2.5 are retired for new keys
+#   BREVO_API_KEY           transactional email, 300/day free with no card
+#   BREVO_SENDER            a sender address verified in Brevo
+#   RESEND_API_KEY          optional; only used once MAIL_FROM names a verified
+#                           domain
+#   MAIL_FROM               leave unset while using Brevo
+#   GOOGLE_CLIENT_ID        optional, for Google sign-in
+#   GOOGLE_CLIENT_SECRET    optional
+#   UPSTASH_REDIS_REST_URL  shared rate limiting across serverless instances
+#   UPSTASH_REDIS_REST_TOKEN
+#   OBJECT_STORAGE_ENDPOINT Backblaze B2 or Cloudflare R2
+#   OBJECT_STORAGE_BUCKET
+#   OBJECT_STORAGE_ACCESS_KEY
+#   OBJECT_STORAGE_SECRET_KEY
+#   OBJECT_STORAGE_REGION
+#   SENTRY_DSN              optional
+
+[build]
+  # The app lives in web/ inside a repository that also holds the docs and the
+  # static demo, so the base directory is what points Netlify at the server.
+  base = "web"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Netlify detects Next.js and uses its own runtime. The legacy
+  # @netlify/plugin-nextjs is deliberately NOT used: it downloads a large tree of
+  # vendored binaries on every build, and it timed out fetching sharp from
+  # GitHub on a connection that was otherwise fine. Detection avoids all of it.
+
+# Serverless functions run the Next.js runtime. A cold start here is a wait for
+# the module graph to be built, not for the app to boot.
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["scripts/**"]
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    cache-control = "no-store"
+
+[[redirects]]
+  # Keep the old /biostats path alive; it redirects in-app as well, and this
+  # makes it work before any JavaScript runs.
+  from = "/biostats"
+  to = "/research?tab=biostat"
+  status = 301
